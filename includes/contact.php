@@ -51,6 +51,8 @@ function contact_store_message(array $message): void
         throw new RuntimeException('Het bericht kon niet naar JSON worden omgezet.');
     }
 
+    // Store form submissions even when the host cannot send mail. The temp-file
+    // write keeps the message archive valid if a request is interrupted.
     $temporaryPath = $path . '.tmp';
 
     if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
@@ -110,6 +112,7 @@ function handle_contact_submission(array $config, array $post): array
         'message' => trim((string) ($post['message'] ?? '')),
     ];
 
+    // Honeypot field: real visitors never see it, simple spambots often fill it.
     if (trim((string) ($post['website'] ?? '')) !== '') {
         $result['success'] = true;
         return $result;

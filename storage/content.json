@@ -1,12 +1,16 @@
 {
     "site": {
         "name": "Lodging at 8",
-        "reservation_url": "https://reservations.cubilis.eu/lodging-at-8-leuven/Rooms/Select",
+        "reservation_url": "https://bookingengine.mylighthouse.com/6471",
         "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL",
         "email": "info@lodgingat8.be",
         "phone": "+32 (0) 475 93 72 21",
         "address": "Weldadigheidsstraat 8, 3000 Leuven",
-        "logo": "site/logo-footer.png"
+        "logo": "site/logo-footer.png",
+        "owner": "Steven Frooninckx",
+        "company": "B&B Lodging At 8 V.O.F.",
+        "business_number": "BE 0898 536 239",
+        "iban": "BE84-0682-4977-8259"
     },
     "booking_widget": {
         "enabled": true,
@@ -127,91 +131,91 @@
         "leuven": [
             {
                 "file": "leuven/Leuven001.jpg",
-                "alt": "Leuven 1"
+                "title": "Leuven 1"
             },
             {
                 "file": "leuven/Leuven018.jpg",
-                "alt": "Leuven 2"
+                "title": "Leuven 2"
             },
             {
                 "file": "leuven/Leuven004.jpg",
-                "alt": "Leuven 3"
+                "title": "Leuven 3"
             },
             {
                 "file": "leuven/Leuven002.jpg",
-                "alt": "Leuven 4"
+                "title": "Leuven 4"
             },
             {
                 "file": "leuven/Leuven014.jpg",
-                "alt": "Leuven 5"
+                "title": "Leuven 5"
             },
             {
                 "file": "leuven/Leuven010.jpg",
-                "alt": "Leuven 6"
+                "title": "Leuven 6"
             },
             {
                 "file": "leuven/Leuven008.jpg",
-                "alt": "Leuven 7"
+                "title": "Leuven 7"
             },
             {
                 "file": "leuven/Leuven006.jpg",
-                "alt": "Leuven 8"
+                "title": "Leuven 8"
             },
             {
                 "file": "leuven/Leuven032.jpg",
-                "alt": "Leuven 9"
+                "title": "Leuven 9"
             },
             {
                 "file": "leuven/Leuven024.jpg",
-                "alt": "Leuven 10"
+                "title": "Leuven 10"
             },
             {
                 "file": "leuven/Leuven026.jpg",
-                "alt": "Leuven 11"
+                "title": "Leuven 11"
             },
             {
                 "file": "leuven/Leuven028.jpg",
-                "alt": "Leuven 12"
+                "title": "Leuven 12"
             },
             {
                 "file": "leuven/Leuven030.jpg",
-                "alt": "Leuven 13"
+                "title": "Leuven 13"
             },
             {
                 "file": "leuven/Leuven020.jpg",
-                "alt": "Leuven 14"
+                "title": "Leuven 14"
             },
             {
                 "file": "leuven/Leuven022.jpg",
-                "alt": "Leuven 15"
+                "title": "Leuven 15"
             }
         ],
         "kamer-1": [
+            {
+                "file": "kamer-1/bgstr-dakterras.jpg",
+                "title": "Dakterras"
+            },
             {
                 "file": "kamer-1/CRW_7055.jpg",
                 "title": "Kamer 1"
             },
             {
                 "file": "kamer-1/bgstr-shower.jpg",
-                "title": "Douche"
-            },
-            {
-                "file": "kamer-1/bgstr-dakterras.jpg",
-                "title": "Dakterras"
+                "title": ""
             }
         ],
         "kamer-2": [
             {
                 "file": "kamer-2/bgstr-room2.jpg",
-                "alt": "Kamer 2"
+                "title": "Kamer 2"
             },
             {
                 "file": "kamer-2/bgstr-room2-2.jpg",
-                "alt": "Kamer 2 detail"
+                "title": "Kamer 2 detail"
             },
             {
                 "file": "kamer-2/bgstr-room2door.jpg",
-                "alt": "Kamerdeur"
+                "title": "bgstr-room2door"
             }
         ],
         "kamer-3": [
@@ -231,8 +235,8 @@
     },
     "rooms": {
         "kamer-1": {
-            "title": "room 1",
-            "summary": "Rustige kamer met balkon, dakterras en een badkamer met zicht.",
+            "title": "1",
+            "summary": "",
             "image": "kamer-1/CRW_7055.jpg",
             "gallery": "kamer-1",
             "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22492",
@@ -249,76 +253,73 @@
                 "Volledig gerenoveerde kamer",
                 "Hedendaagse inrichting"
             ],
-            "prices_heading": "Prijs per nacht",
-            "prices": {
-                "1 persoon": "89 euro",
-                "2 personen": "99 euro"
-            },
+            "prices_heading": "",
+            "prices": [],
             "extra_info": [
                 "Inclusief ontbijt, wi-fi en taksen.",
-                "Privé autostaanplaatsen aan 5 euro/nacht. Fietsen worden beschikbaar gesteld aan 8 euro/dag.",
-                "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag, vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M."
+                "Privé autostaanplaatsen aan 15 euro/nacht",
+                "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag",
+                "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
             ],
             "translations": {
                 "en": {
                     "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=22492",
-                    "prices_heading": "Price per night",
+                    "prices_heading": "",
                     "extra_info": [
                         "Breakfast, Wi-Fi and taxes included.",
-                        "Private parking spaces at 5 euro/night. Bikes are available at 8 euro/day.",
-                        "Free transfer from and to the station/airport on request, from a stay of 2 nights and not between 7:00 and 10:00 A.M."
+                        "Private parking places at 15 euro/night",
+                        "Free transportation from and to the railway station/airport upon request.",
+                        "( for stays of two nights and not between 7:00 and 10: 00h AM)"
                     ],
                     "title": "room 1",
-                    "summary": "Rustige kamer met balkon, dakterras en een badkamer met zicht.",
                     "features": [
-                        "Badkamer met zicht",
-                        "Douche en wc",
-                        "Koelkast",
-                        "Dubbel bed 1m80 breed",
-                        "Ergonomische hoofdkussens",
-                        "Kabeltelevisie en dvd-speler",
-                        "Internet",
-                        "Bedlinnen en handdoeken",
-                        "Balkon en dakterras",
-                        "Volledig gerenoveerde kamer",
-                        "Hedendaagse inrichting"
+                        "Bathroom with a view",
+                        "Private shower and toilet",
+                        "Refrigerator",
+                        "Double bed (1m80 x 2 m)",
+                        "Ergonomic pillows",
+                        "Flatscreen, cable, DVD-player",
+                        "Internet connection",
+                        "Linnen and towels",
+                        "Balcony and access to roofterrace",
+                        "Fully renovated room",
+                        "Contemporary design"
                     ],
-                    "prices": {
-                        "1 persoon": "89 euro",
-                        "2 personen": "99 euro"
-                    }
+                    "prices": [],
+                    "summary": "",
+                    "nav_title": "room 1"
                 },
                 "fr": {
                     "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=22492",
-                    "prices_heading": "Prix par nuit",
+                    "prices_heading": "",
                     "extra_info": [
                         "Petit déjeuner, Wi-Fi et taxes inclus.",
-                        "Places de parking privées à 5 euros/nuit. Des vélos sont disponibles à 8 euros/jour.",
-                        "Transport gratuit depuis et vers la gare/l’aéroport sur simple demande, à partir de 2 nuits et pas entre 7h00 et 10h00."
+                        "Parkings privé à 15 euro/nuit",
+                        "Transport gratuit depuis et vers la gare / aéroport sur demande.",
+                        "(Pour les séjours au moins de deux nuits, et pas entre 7h00 et 10h00 AM )"
                     ],
                     "title": "room 1",
-                    "summary": "Rustige kamer met balkon, dakterras en een badkamer met zicht.",
                     "features": [
-                        "Badkamer met zicht",
-                        "Douche en wc",
-                        "Koelkast",
-                        "Dubbel bed 1m80 breed",
-                        "Ergonomische hoofdkussens",
-                        "Kabeltelevisie en dvd-speler",
+                        "‘Salle de bain avec vue’",
+                        "Douche et wc",
+                        "Frigo",
+                        "Double lit 1m80 de large",
+                        "Oreiller ergonomique",
+                        "Télé avec télédistribution et lecteur DVD",
                         "Internet",
-                        "Bedlinnen en handdoeken",
-                        "Balkon en dakterras",
-                        "Volledig gerenoveerde kamer",
-                        "Hedendaagse inrichting"
+                        "Draps et serviettes",
+                        "Balcon",
+                        "Petit déjeuner sur demande, dans la chambre ou dans l’espace ‘petit-déjeuner’",
+                        "Chambre complètement rénovée",
+                        "Aménagement contemporain"
                     ],
-                    "prices": {
-                        "1 persoon": "89 euro",
-                        "2 personen": "99 euro"
-                    }
+                    "prices": [],
+                    "summary": "",
+                    "nav_title": "room 1"
                 },
                 "nl": {
-                    "title": "room 1",
-                    "summary": "Rustige kamer met balkon, dakterras en een badkamer met zicht.",
+                    "title": "1",
+                    "summary": "",
                     "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22492",
                     "features": [
                         "Badkamer met zicht",
@@ -333,18 +334,18 @@
                         "Volledig gerenoveerde kamer",
                         "Hedendaagse inrichting"
                     ],
-                    "prices_heading": "Prijs per nacht",
-                    "prices": {
-                        "1 persoon": "89 euro",
-                        "2 personen": "99 euro"
-                    },
+                    "prices_heading": "",
+                    "prices": [],
                     "extra_info": [
                         "Inclusief ontbijt, wi-fi en taksen.",
-                        "Privé autostaanplaatsen aan 5 euro/nacht. Fietsen worden beschikbaar gesteld aan 8 euro/dag.",
-                        "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag, vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M."
-                    ]
+                        "Privé autostaanplaatsen aan 15 euro/nacht",
+                        "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag",
+                        "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+                    ],
+                    "nav_title": "Kamer 1"
                 }
-            }
+            },
+            "nav_title": "Kamer 1"
         },
         "kamer-2": {
             "title": "room 2",
@@ -383,7 +384,27 @@
                         "Breakfast, Wi-Fi and taxes included.",
                         "Private parking spaces at 5 euro/night. Bikes are available at 8 euro/day.",
                         "Free transfer from and to the station/airport on request, from a stay of 2 nights and not between 7:00 and 10:00 A.M."
-                    ]
+                    ],
+                    "title": "room 2",
+                    "nav_title": "room 2",
+                    "summary": "Ruime kamer met dakterras en alle hedendaags comfort.",
+                    "features": [
+                        "Badkamer met zicht",
+                        "Douche en wc",
+                        "Koelkast",
+                        "Dubbel bed 1m80 breed",
+                        "Ergonomische hoofdkussens",
+                        "Kabeltelevisie en dvd-speler",
+                        "Internet",
+                        "Bedlinnen en handdoeken",
+                        "Dakterras",
+                        "Volledig gerenoveerde kamer",
+                        "Hedendaagse inrichting"
+                    ],
+                    "prices": {
+                        "1 persoon": "89 euro",
+                        "2 personen": "99 euro"
+                    }
                 },
                 "fr": {
                     "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=23747",
@@ -392,9 +413,59 @@
                         "Petit déjeuner, Wi-Fi et taxes inclus.",
                         "Places de parking privées à 5 euros/nuit. Des vélos sont disponibles à 8 euros/jour.",
                         "Transport gratuit depuis et vers la gare/l’aéroport sur simple demande, à partir de 2 nuits et pas entre 7h00 et 10h00."
+                    ],
+                    "title": "room 2",
+                    "nav_title": "room 2",
+                    "summary": "Ruime kamer met dakterras en alle hedendaags comfort.",
+                    "features": [
+                        "Badkamer met zicht",
+                        "Douche en wc",
+                        "Koelkast",
+                        "Dubbel bed 1m80 breed",
+                        "Ergonomische hoofdkussens",
+                        "Kabeltelevisie en dvd-speler",
+                        "Internet",
+                        "Bedlinnen en handdoeken",
+                        "Dakterras",
+                        "Volledig gerenoveerde kamer",
+                        "Hedendaagse inrichting"
+                    ],
+                    "prices": {
+                        "1 persoon": "89 euro",
+                        "2 personen": "99 euro"
+                    }
+                },
+                "nl": {
+                    "title": "room 2",
+                    "nav_title": "room 2",
+                    "summary": "Ruime kamer met dakterras en alle hedendaags comfort.",
+                    "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=23747",
+                    "features": [
+                        "Badkamer met zicht",
+                        "Douche en wc",
+                        "Koelkast",
+                        "Dubbel bed 1m80 breed",
+                        "Ergonomische hoofdkussens",
+                        "Kabeltelevisie en dvd-speler",
+                        "Internet",
+                        "Bedlinnen en handdoeken",
+                        "Dakterras",
+                        "Volledig gerenoveerde kamer",
+                        "Hedendaagse inrichting"
+                    ],
+                    "prices_heading": "Prijs per nacht",
+                    "prices": {
+                        "1 persoon": "89 euro",
+                        "2 personen": "99 euro"
+                    },
+                    "extra_info": [
+                        "Inclusief ontbijt, wi-fi en taksen.",
+                        "Privé autostaanplaatsen aan 5 euro/nacht. Fietsen worden beschikbaar gesteld aan 8 euro/dag.",
+                        "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag, vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M."
                     ]
                 }
-            }
+            },
+            "nav_title": "room 2"
         },
         "kamer-3": {
             "title": "room 3",
@@ -446,7 +517,8 @@
                         "Transport gratuit depuis et vers la gare/l’aéroport sur simple demande, à partir de 2 nuits et pas entre 7h00 et 10h00."
                     ]
                 }
-            }
+            },
+            "nav_title": ""
         }
     },
     "pages": {
@@ -475,7 +547,43 @@
                 "Mingle with the locals and find out for yourself!",
                 "Visit the official website of Louvain to learn more about city walks, guided tours, must-sees and the cultural agenda.",
                 "Louvain, probably Belgium's best kept secret for an unforgettable time!"
-            ]
+            ],
+            "translations": {
+                "nl": {
+                    "title": "Leuven",
+                    "intro": [
+                        "<a href=\"http://www.leuven.be/\">Leuven</a>&nbsp;heeft heelwat te bieden. Er werd de laatste jaren veel gedaan om de stad en zijn bezoekers een uitgebreid cultureel aanbod te geven. Eén van die initiatieven was de uitbreiding op een nieuwe locatie van het kunstencentrum het&nbsp;<a href=\"http://www.stuk.be/\">“STUK”</a>, op loopafstand van je verblijf. Expo, dans, theater, muziek, op een mooie eigentijdse locatie. Maar ook&nbsp;<a href=\"http://www.leuven.be/fr/tourisme/curiosites/beguinages/index.jsp\">het Begijnhof</a>, enkele prachtige&nbsp;kerken, de&nbsp;Oude Markt&nbsp;met zijn talrijke&nbsp;cafés en restaurants&nbsp;en de&nbsp;Grote Markt&nbsp;met het unieke hooggotische stadhuis zijn zeker een bezoek waard.",
+                        "Informatie word je ter beschikking gesteld.",
+                        "Ook culinair kom je aan je trekken.",
+                        "Verschillende restaurants, met een goede prijs/kwaliteitsverhouding,&amp;nbsp;zal je weten te appreciëren. Je beschikt over een zeer gevarieerde keuze.",
+                        "Op de website van Leuven vind je een uitgebreid aanbod van mooie wandelingen doorheen het oude en nieuwe.",
+                        "En dat Leuven heel wat uitgaansmogelijkheden heeft, hoeft geen betoog…."
+                    ]
+                },
+                "fr": {
+                    "title": "Leuven",
+                    "intro": [
+                        "<a href=\"http://www.leuven.be/\">Louvain</a>&nbsp;est une ville qui vous offre toute une gamme d’activités intéressantes.",
+                        "Les dernières années, on a fait un effort remarquable pour doter la ville d’une vie culturelle variée.",
+                        "L’ampliation du centre culturel ‘<a href=\"http://www.stuk.be/\">STUK</a>‘,&nbsp;près de notre maison,&nbsp; est une de ces initiatives: expo, danse, théâtre, musique dans une belle implantation contemporaine.",
+                        "Mais aussi les&nbsp;<a href=\"http://www.leuven.be/fr/tourisme/curiosites/beguinages/index.jsp\">béguinages</a>&nbsp;(Grand et Petit), quelques églises magnifiques, le&nbsp;Vieux Marché&nbsp;(Oude Markt) avec ses restaurants et cafés et la&nbsp;Grand-Place&nbsp;(Grote Markt) avec son unique hôtel de ville gothique, valent bien une visite.",
+                        "Au niveau culinaire, vous trouverez aussi un grand choix de&amp;nbsp;restaurants&amp;nbsp;de tous les coins de monde, avec une bonne proportion prix/qualité.",
+                        "Au site-web de la ville, vous trouverez quelques belles promenades qui vous mènent de l’ancien au contemporain.",
+                        "Et pour sortir la nuit …… il va de soi que de multiples possibilités vous attendent."
+                    ]
+                },
+                "en": {
+                    "title": "Leuven",
+                    "intro": [
+                        "<a href=\"http://www.leuven.be/\">Louvain</a>&nbsp;(Leuven) has a lot to offer: theatre, dance, expositions, music and film – for instance in the Comtemporary Arts Centre ‘<a href=\"http://www.stuk.be/\">STUK</a>‘,the&nbsp;<a href=\"http://www.leuven.be/fr/tourisme/curiosites/beguinages/index.jsp\">beguinage</a>, a variety of beautiful churches,the old market square ‘Oude Markt’with its many pubs, cafés and restaurants, and of course the main square ‘Grote Markt’ with its famous high gothic town hall.",
+                        "A city stuffed with universities is your best guarantee for a lively nightlife …",
+                        "The local cuisine is renowned,restaurants ranging from low-budget to more exquisite and sophisticated.",
+                        "Mingle with the locals and find out for yourself!",
+                        "Visit the official website of Louvain to learn more about city walks,&amp;nbsp;guided tours, must -sees and the cultural agenda.",
+                        "Louvain, probably Belgium’s best kept secret for an unforgetable time!"
+                    ]
+                }
+            }
         },
         "locatie": {
             "title": "Locatie",
@@ -489,7 +597,22 @@
         },
         "contact": {
             "title": "contact",
-            "type": "contact"
+            "type": "contact",
+            "translations": {
+                "nl": {
+                    "title": "contact",
+                    "intro": [],
+                    "success_message": "Bedankt, je bericht werd verzonden."
+                },
+                "fr": {
+                    "title": "contact",
+                    "intro": []
+                },
+                "en": {
+                    "title": "contact",
+                    "intro": []
+                }
+            }
         },
         "links": {
             "title": "links",
@@ -586,12 +709,6 @@
                             [
                                 "Taxi Gerard",
                                 "https://www.taxigerard.be/"
-                            ]
-                        ],
-                        "test": [
-                            [
-                                "test",
-                                "test"
                             ]
                         ]
                     }
@@ -728,7 +845,93 @@
             "intro": [
                 "Deze pagina is voorzien voor de algemene voorwaarden van Lodging at 8.",
                 "Boekingen, annuleringen, betalingen en verblijf ter plaatse kunnen hier verder worden uitgewerkt volgens de actuele juridische tekst."
-            ]
+            ],
+            "translations": {
+                "nl": {
+                    "title": "algemene voorwaarden",
+                    "intro": [
+                        "<strong><em>Algemene Voorwaarden Lodging At 8 Bed and Breakfast</em></strong>",
+                        "&amp;nbsp;",
+                        "<strong>1. Toepasselijkheid Algemene Voorwaarden</strong>",
+                        "1.1 Deze algemene voorwaarden zijn van toepassing op alle aanbiedingen en offertes van, overeenkomsten met, leveringen en diensten van deB&amp;B.",
+                        "Afwijkende bedingen, afspraken of regelingen gelden slechts indien en voor zover deze door de B&amp;B schriftelijk zijn bevestigd. Mondelinge afspraken en/of toezeggingen van medewerkers van de B&amp;B zijn uitsluitend geldig indien zij schriftelijk zijn bevestigd door daartoe bevoegde medewerkers van de B&amp;B.",
+                        "1.2 Deze algemene voorwaarden zijn uitsluitend van toepassing op rechtsverhoudingen tussen de B&amp;B en consumenten en niet tussen de B&amp;B en bedrijven respectievelijk personen die handelen in de uitoefening van hun beroep.",
+                        "&amp;nbsp;",
+                        "<strong>2. Aanbiedingen, Prijzen en tarieven</strong>",
+                        "2.1. Aanbiedingen van de B&amp;B zijn steeds vrijblijvend en geschieden onder voorbehoud van tussentijdse wijzigingen.",
+                        "2.2 Alle vermeldingen op de website van de B&amp;B (<a href=\"http://www.lodgingat8.be/\">www.lodgingat8.be</a>) worden geacht te goeder trouw te zijn verstrekt en geschieden steeds onder voorbehoud van tussentijdse aanpassingen. De B&amp;B is niet aan kennelijke fouten op haar website gebonden!",
+                        "2.3 Prijzen zijn steeds exclusief kosten van een annulering‐ en reisverzekering en eventuele andere kosten.",
+                        "&amp;nbsp;",
+                        "<strong>3. Totstandkoming en inhoud overeenkomst</strong>",
+                        "3.1 Een overeenkomst tussen de B&amp;B en de gast komt tot stand door bevestiging van een, schriftelijke of elektronische (internet/email) boeking van een accommodatie uit het actuele aanbod van de B&amp;B.",
+                        "3.2. Na boeking ontvangt de gast per email een bevestiging van de boeking/huurovereenkomst die als bewijs van de overeenkomst dient.",
+                        "Indien er geen email adres of een voor sms‐boodschappen geschikt telefoonnummer door gast kan worden overhandigd is er slechts een mondeling afgesloten overeenkomst.",
+                        "3.3 De door de B&amp;B gestuurde boekingsbevestigingen bevatten relevante gegevens voor het verblijf in de geboekte B&amp;B accommodatie. In het belang van een goede boeking en ter voorkoming van misverstanden, verplicht de gast zich om na ontvangst van de boekingsbevestiging of overeenkomst onmiddellijk de juistheid en volledigheid van de geboekte gegevens te controleren en eventueel onvolledigheden of onjuistheden binnen 24 uur na ontvangst van de boekingsbevestiging of overeenkomst aan de B&amp;B te melden.",
+                        "Blijft een dergelijke melding binnen gestelde termijn uit, dan is de gast niet gerechtigd zich op de onvolledigheid of onjuistheid van de boekingsbevestiging/overeenkomst te beroepen.",
+                        "&amp;nbsp;",
+                        "<strong>4. Betaling</strong>",
+                        "4.1&amp;nbsp;Betaling van de boeking aan de B&amp;B geschiedt ter plaatse in contanten of met creditcard. Een voorschot wordt betaald door overmaking van het verschuldigde op bankrekeningnummer IBAN BE84 0682 4977 8259 met vermelding van naam en adres en datum/data van het verblijf of het door de eigenaar aangegeven reservatienummer. De gast kan tevens het saldo of de totale som overschrijven indien gewenst.",
+                        "4.2&amp;nbsp;In het geval van late boekingen (binnen 48 uur voor aankomst) is het alleen mogelijk contant of met creditcard te betalen.",
+                        "4.3.&amp;nbsp;Betaling van een voorschot dient te gebeuren binnen de 5 werkdagen na het verzenden van de bevestigingsmail. Een voorschot dient niet te worden betaald bij late boekingen. (binnen 48 uur voor aankomst)",
+                        "&amp;nbsp;",
+                        "<strong>5. Annulering en wijziging</strong>",
+                        "5.1 De gast is gerechtigd een boeking schriftelijk, zonder kosten, binnen een bedenktermijn van 7 dagen te annuleren, tenzij het verblijf in de B&amp;B accommodatie binnen 28 dagen na de boeking valt.",
+                        "5.2 Na afloop van de in 5.1 vermelde termijn is de gast slechts gerechtigd tot schriftelijke annulering tegen voldoening van de onder a. t/m c. vermelde annuleringskosten:",
+                        "&amp;nbsp;",
+                        "a. Vanaf 28 dagen tot 7 dagen voor aankomst worden de boekingskosten en 30 % van de aanvankelijke prijs gerekend of het voorschot ingehouden.",
+                        "b. Vanaf 7 dagen tot 1 dag voor de dag van aankomst worden boekingskosten en 50 % van het totale bedrag gerekend.",
+                        "c. Annuleren op de dag van aankomst, of tijdens het verblijf, of bij No Show: het hele bedrag van de boeking wordt doorberekend maar er worden geen boekingskosten doorberekend.",
+                        "&amp;nbsp;",
+                        "5.3 Het annuleren van een boeking door de (Hoofd)gast geldt ook als annulering ten laste van medegast(en).",
+                        "5.4 Annulering door de B&amp;B: de B&amp;B dient de gast binnen 48 uur (2 werkdagen) nadat gewichtige omstandigheden zijn ingetreden een wijzigingsvoorstel te doen in de vorm van een alternatief aanbod. Is dit niet mogelijk, dan restitueert de B&amp;B de door gast betaalde reserveringskosten en de aanbetaling op de verblijfsvergoeding.",
+                        "Deze verplichting vervalt, indien de oorzaak van de wijziging aan de gast is toe te rekenen.",
+                        "5.5 De B&amp;B rekent € 10,‐‐ administratiekosten voor boekingen die op verzoek van de gast gewijzigd moeten worden.",
+                        "&amp;nbsp;",
+                        "<strong>6. Rechten en verplichtingen van de gast ter plaatse van de accommodatie</strong>",
+                        "<strong>&nbsp;</strong>",
+                        "6.1 Op de situatie ter plaatse is naast deze voorwaarden en de overeenkomst steeds het plaatselijke recht van toepassing. Voor zover bij wet niets",
+                        "anders is bepaald prevaleren deze voorwaarden en de gebruikersovereenkomst.",
+                        "6.2 Voor aankomsttijden voor 17.00 uur of na 21.00 uur dient de gast met de eigenaar en/of beheerder vooraf in contact te treden om de mogelijkheden van een vervroegde of verlate aankomst te bespreken.",
+                        "6.3 De gast dient zich te gedragen als een goed gebruiker en de B&amp;B accommodatie te gebruiken overeenkomstig de door de B&amp;B of de eigenaar/beheerder op eerste verzoek van de gast gegeven redelijke gebruiksinstructies. Zo zijn huis‐ of andere meegebrachte dieren niet",
+                        "toegestaan in de B&amp;B. Ook geldt er in de gehele B&amp;B een rookverbod.",
+                        "6.4 De gast is wettelijk aansprakelijk voor de door hem of zijn medegasten aan de B&amp;B accommodatie of de daarin aanwezige zaken toegebrachte schade. Een schadegeval dient door de gast direct aan de eigenaar of de beheerder te worden gemeld. Reparatie‐ of &amp;nbsp;ervangingskosten dienen door de gast onmiddellijk aan de eigenaar/beheerder op diens eerste verzoek te worden vergoed.",
+                        "<strong>&nbsp;</strong>",
+                        "<strong>7. Overmacht</strong>",
+                        "In geval van overmacht, zowel van blijvende als tijdelijke aard, is de B&amp;B gerechtigd de overeenkomst geheel of gedeeltelijk te ontbinden of tijdelijk op te schorten zonder dat de gast aanspraak op nakoming en/of schadevergoeding kan doen gelden. Onder overmacht wordt onder meer, doch niet uitsluitend verstaan: stakingen, boycot, storingen in het energiecircuit, in het verkeer of transport, maatregelen van overheidswege, schaarste aan grondstoffen, natuurrampen en voorts alle omstandigheden, buitengewone weersomstandigheden, overlijden van de eigenaar, echtscheiding van de eigenaar, onaangekondigde verkoop en/of ingebruikname van de accommodatie door de eigenaar e.d. waaronder gehele of gedeeltelijke nakoming van de overeenkomst naar redelijkheid en billijkheid niet van de B&amp;B kan worden gevergd.",
+                        "&amp;nbsp;",
+                        "<strong>8. Aansprakelijkheid</strong>",
+                        "8.1 De B&amp;B kan niet aansprakelijk worden gehouden voor door de gast of derden ten gevolge het verblijf in de accommodatie geleden schade; de gast vrijwaart de B&amp;B tegen aanspraken dienaangaande. De B&amp;B is niet aansprakelijk voor storingen in en om de accommodatie zoals",
+                        "storingen en uitval van stroom en watervoorzieningen en technische installaties, niet of ontijdig aangekondigde bouwwerkzaamheden en veranderingen aan toegangs‐ of hoofdwegen.",
+                        "8.2 De B&amp;B kan slechts aansprakelijk worden gehouden voor schade die is te wijten aan de grove schuld of de nalatigheid van de B&amp;B.",
+                        "8.3 Onverminderd het in de vorige leden bepaalde is de aansprakelijkheid van de B&amp;B, indien en voor zover de B&amp;B uit enige hoofde ter zake de gebruikersovereenkomst in rechte aansprakelijkheid wordt gehouden, steeds beperkt tot directe schade en is elke vorm van gevolgschade uitgesloten. De aansprakelijkheid van de B&amp;B is voorts steeds beperkt tot het maximumbedrag dat de verzekeraar van de B&amp;B in het voorkomende geval zal uitkeren.",
+                        "&amp;nbsp;",
+                        "<strong>11. Privacy</strong>",
+                        "De B&amp;B zal alle aan haar verstrekte of bekend geworden persoonsgegevens",
+                        "vertrouwelijk behandelen en niet vrijelijk aan derden ter beschikking stellen.",
+                        "&amp;nbsp;",
+                        "<strong>12. Slotbepaling</strong>",
+                        "12.1 Voor zover bij wegen van regels van internationaal privaatrecht niet anders bepaald, is op de onderhavige voorwaarden uitsluitend het Belgische recht van toepassing. Niet-Belgische gasten worden geacht akkoord te zijn met de algemene voorwaarden.",
+                        "12.2 Alle geschillen voortvloeiende uit de gebruikersovereenkomst of deze voorwaarden zullen in eerste aanleg worden beslecht door de bevoegde rechter in België, voor zover de regels van internationaal privaatrecht niet anders bepalen.",
+                        "12.3. Geen van de partijen kan haar rechten en verplichtingen aan derden overdragen voor zover in de onderhavige voorwaarden niets anders is bepaald.",
+                        "12.4 Indien en voor zover enige bepaling in de gebruikersovereenkomst en de onderhavige voorwaarden nietig mocht blijken, blijven de overige voorwaarden in stand en wordt het nietige artikel aldus geacht te zijn geconverteerd aldus dat het in overeenstemming met de kennelijke bedoelingen van partijen wordt gebracht.",
+                        "&amp;nbsp;",
+                        "Leuven, 15 november 2011"
+                    ]
+                },
+                "fr": {
+                    "title": "annulation",
+                    "intro": [
+                        "En cas d’annulation d’un séjour confirmé, le hôte est tenu de payé des frais de reservation comme suite:"
+                    ]
+                },
+                "en": {
+                    "title": "cancellation policy",
+                    "intro": [
+                        "A cancellation of a confirmed booking has to be done via E-mail or postal mail. Due to a cancellation, B&amp;B Lodging At 8, Weldadigheidsstraat 8, 3000 Leuven, will ask a cancellation fee as follows:",
+                        "&amp;nbsp;"
+                    ]
+                }
+            }
         }
     }
 }

@@ -253,6 +253,13 @@ function admin_text_from_pairs(array $pairs): string
 
 function admin_pairs_from_text(string $text): array
 {
+    // Prices can come from a plain textarea or older rich-text markup. Normalize
+    // both to simple "label | value" lines before parsing.
+    $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $text = preg_replace('/<br\b[^>]*>/i', PHP_EOL, $text) ?? $text;
+    $text = preg_replace('/<\/(div|p|li|ul|ol)\b[^>]*>/i', PHP_EOL, $text) ?? $text;
+    $text = strip_tags($text);
+
     $pairs = [];
 
     foreach (admin_lines_from_text($text) as $line) {
@@ -264,6 +271,49 @@ function admin_pairs_from_text(string $text): array
     }
 
     return $pairs;
+}
+
+function admin_pairs_from_value($value): array
+{
+    if (is_array($value)) {
+        if (isset($value['label']) || isset($value['value'])) {
+            $labels = is_array($value['label'] ?? null) ? $value['label'] : [];
+            $prices = is_array($value['value'] ?? null) ? $value['value'] : [];
+            $pairs = [];
+
+            foreach ($labels as $index => $label) {
+                $cleanLabel = trim((string) $label);
+                $cleanPrice = trim((string) ($prices[$index] ?? ''));
+
+                if ($cleanLabel === '' || $cleanPrice === '') {
+                    continue;
+                }
+
+                $pairs[$cleanLabel] = $cleanPrice;
+            }
+
+            return $pairs;
+        }
+
+        if (!is_list_array($value)) {
+            $pairs = [];
+
+            foreach ($value as $label => $price) {
+                $cleanLabel = trim((string) $label);
+                $cleanPrice = trim((string) $price);
+
+                if ($cleanLabel === '' || $cleanPrice === '') {
+                    continue;
+                }
+
+                $pairs[$cleanLabel] = $cleanPrice;
+            }
+
+            return $pairs;
+        }
+    }
+
+    return admin_pairs_from_text((string) $value);
 }
 
 function admin_normalize_media_item($item): array
@@ -323,14 +373,14 @@ function admin_media_from_post(array $post, array $uploaded = []): array
         $title = trim((string) ($titles[$index] ?? ''));
         $items[] = [
             'file' => $file,
-            'title' => $title !== '' ? $title : pathinfo($file, PATHINFO_FILENAME),
+            'title' => $title,
         ];
     }
 
     foreach ($uploaded as $file) {
         $items[] = [
             'file' => $file,
-            'title' => pathinfo($file, PATHINFO_FILENAME),
+            'title' => '',
         ];
     }
 
@@ -370,7 +420,7 @@ function admin_append_uploaded_media(array $items, array $uploaded): array
     foreach ($uploaded as $file) {
         $items[] = [
             'file' => $file,
-            'title' => pathinfo($file, PATHINFO_FILENAME),
+            'title' => '',
         ];
     }
 
@@ -379,6 +429,8 @@ function admin_append_uploaded_media(array $items, array $uploaded): array
 
 function admin_safe_media_filename(string $file): string
 {
+    // Media paths come from editable JSON and form posts. Keep them relative to
+    // assets/img and reject traversal or unexpected filename characters.
     $file = trim(str_replace('\\', '/', $file));
 
     if ($file === '') {
@@ -417,6 +469,7 @@ function admin_safe_media_filename(string $file): string
 
 function admin_media_directory(string $context): string
 {
+    // Keep uploaded files grouped by the page or room they belong to.
     $context = preg_replace('/[^a-z0-9-]/', '', strtolower($context)) ?? '';
 
     if ($context === '') {
@@ -554,6 +607,8 @@ function admin_link_rows_from_columns(array $columns): array
 
 function admin_link_sections_from_columns(array $columns): array
 {
+    // The public site stores links as columns; the admin UI edits them as named
+    // sections with rows so labels and URLs stay aligned.
     $defaultHeadings = ['In Leuven', 'Logeren en reizen'];
     $sections = [];
 
@@ -749,14 +804,16 @@ function admin_save_room_content(array $content, string $roomKey, array $post, a
     foreach (supported_languages() as $language => $label) {
         $languagePost = $post['translations'][$language] ?? [];
         $title = trim((string) ($languagePost['title'] ?? ''));
+        $navTitle = trim((string) ($languagePost['nav_title'] ?? ''));
         $summary = trim((string) ($languagePost['summary'] ?? ''));
         $bookingUrl = trim((string) ($languagePost['booking_url'] ?? ''));
         $features = admin_lines_from_value($languagePost['features'] ?? []);
         $pricesHeading = trim((string) ($languagePost['prices_heading'] ?? ''));
-        $prices = admin_pairs_from_text((string) ($languagePost['prices'] ?? ''));
+        $prices = admin_pairs_from_value($languagePost['prices'] ?? []);
         $extraInfo = admin_lines_from_text((string) ($languagePost['extra_info'] ?? ''));
 
         admin_set_translation($content['rooms'][$roomKey], $language, 'title', $title);
+        admin_set_translation($content['rooms'][$roomKey], $language, 'nav_title', $navTitle);
         admin_set_translation($content['rooms'][$roomKey], $language, 'summary', $summary);
         admin_set_translation($content['rooms'][$roomKey], $language, 'booking_url', $bookingUrl);
         admin_set_translation($content['rooms'][$roomKey], $language, 'features', $features);
@@ -766,6 +823,7 @@ function admin_save_room_content(array $content, string $roomKey, array $post, a
 
         if ($language === 'nl') {
             $content['rooms'][$roomKey]['title'] = $title;
+            $content['rooms'][$roomKey]['nav_title'] = $navTitle;
             $content['rooms'][$roomKey]['summary'] = $summary;
             $content['rooms'][$roomKey]['booking_url'] = $bookingUrl;
             $content['rooms'][$roomKey]['features'] = $features;

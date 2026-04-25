@@ -25,6 +25,8 @@ function default_content(): array
 
 function merge_content_defaults(array $content, array $defaults): array
 {
+    // Admin content is intentionally partial. Merge associative defaults so new
+    // config keys can be deployed without overwriting edited site content.
     foreach ($defaults as $key => $value) {
         if (!array_key_exists($key, $content)) {
             $content[$key] = $value;
@@ -75,6 +77,8 @@ function save_content(array $content): void
         throw new RuntimeException('De content kon niet naar JSON worden omgezet.');
     }
 
+    // Write to a temporary file first so interrupted saves do not corrupt the
+    // live JSON file that powers the public website.
     $temporaryPath = content_json_path() . '.tmp';
 
     if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
@@ -95,6 +99,8 @@ function save_content(array $content): void
 
 function image_files(): array
 {
+    // Return paths relative to assets/img, matching the way media references are
+    // stored in content JSON and admin forms.
     $imagePath = rtrim(base_path('assets/img'), '/\\');
 
     if (!is_dir($imagePath)) {

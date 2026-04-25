@@ -1,6 +1,7 @@
 const backgroundSlides = Array.from(document.querySelectorAll('.background-slide'));
 let backgroundIndex = 0;
 
+// Rotate the full-page background images independently from page galleries.
 if (backgroundSlides.length > 1) {
     window.setInterval(() => {
         backgroundSlides[backgroundIndex].classList.remove('is-visible');
@@ -14,7 +15,16 @@ document.querySelectorAll('[data-gallery]').forEach((gallery) => {
     const images = imageButtons.map((button) => button.querySelector('img')).filter(Boolean);
     const prev = gallery.querySelector('[data-gallery-prev]');
     const next = gallery.querySelector('[data-gallery-next]');
+    const controls = gallery.querySelector('[data-gallery-controls]');
     let index = 0;
+
+    if (images.length <= 1) {
+        if (controls) {
+            controls.hidden = true;
+        }
+
+        return;
+    }
 
     const show = (nextIndex) => {
         if (!images.length) {
@@ -26,14 +36,23 @@ document.querySelectorAll('[data-gallery]').forEach((gallery) => {
         imageButtons[index]?.classList.add('is-visible');
     };
 
-    prev?.addEventListener('click', () => show(index - 1));
-    next?.addEventListener('click', () => show(index + 1));
+    prev?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        show(index - 1);
+    });
 
-    if (images.length > 1) {
-        window.setInterval(() => show(index + 1), 5000);
-    }
+    next?.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        show(index + 1);
+    });
+
+    window.setInterval(() => show(index + 1), 5000);
 });
 
+// One shared lightbox instance is populated from whichever gallery image was
+// clicked. This keeps the page markup small and behavior consistent.
 const lightbox = document.createElement('div');
 lightbox.className = 'lightbox';
 lightbox.hidden = true;
@@ -172,6 +191,8 @@ const detailsAnimationDuration = 280;
 const animatedDetails = Array.from(document.querySelectorAll('[data-booking-dropdown], .language-picker'));
 const detailsTimers = new WeakMap();
 
+// Mobile navigation and dropdowns use class-based animations so the native
+// details elements remain accessible.
 const setNavOpen = (shouldOpen) => {
     if (!nav || !navToggle) {
         return;
@@ -299,6 +320,8 @@ const formatDateInput = (date) => {
 };
 
 document.querySelectorAll('[data-fastbooker]').forEach((form) => {
+    // The booking engine expects Arrival and Departure query parameters, while
+    // visitors interact with browser-native date inputs.
     const arrival = form.querySelector('[data-arrival]');
     const departure = form.querySelector('[data-departure]');
     const today = new Date();

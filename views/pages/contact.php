@@ -1,18 +1,52 @@
-<address>
-    Steven Frooninckx<br>
-    B&amp;B Lodging At 8 V.O.F.<br>
-    <?= e($config['site']['address']) ?><br>
-    Ondernemingsnummer BE 0898 536 239<br>
-    IBAN BE84-0682-4977-8259
-</address>
-<?php $phoneHref = preg_replace('/[^+0-9]/', '', (string) $config['site']['phone']); ?>
-<p><a href="tel:<?= e($phoneHref) ?>"><?= e($config['site']['phone']) ?></a></p>
-<p><a href="mailto:<?= e($config['site']['email']) ?>"><?= e($config['site']['email']) ?></a></p>
+<?php
+$contactDetails = [];
+$contactOwner = trim((string) ($config['site']['owner'] ?? ''));
+$contactCompany = trim((string) ($config['site']['company'] ?? ''));
+$contactAddress = trim((string) ($config['site']['address'] ?? ''));
+$contactBusinessNumber = trim((string) ($config['site']['business_number'] ?? ''));
+$contactIban = trim((string) ($config['site']['iban'] ?? ''));
+$contactPhone = trim((string) ($config['site']['phone'] ?? ''));
+$contactEmail = trim((string) ($config['site']['email'] ?? ''));
+
+if ($contactOwner !== '') {
+    $contactDetails[] = ['', $contactOwner];
+}
+
+if ($contactCompany !== '') {
+    $contactDetails[] = ['', $contactCompany];
+}
+
+if ($contactAddress !== '') {
+    $contactDetails[] = ['', $contactAddress];
+}
+
+if ($contactBusinessNumber !== '') {
+    $contactDetails[] = ['Ondernemingsnummer', $contactBusinessNumber];
+}
+
+if ($contactIban !== '') {
+    $contactDetails[] = ['IBAN', $contactIban];
+}
+?>
+<?php if ($contactDetails !== []): ?>
+    <address>
+        <?php foreach ($contactDetails as $index => [$label, $value]): ?>
+            <?= $label !== '' ? e($label) . ' ' : '' ?><?= e($value) ?><?= $index < count($contactDetails) - 1 ? '<br>' : '' ?>
+        <?php endforeach; ?>
+    </address>
+<?php endif; ?>
+<?php if ($contactPhone !== ''): ?>
+    <?php $phoneHref = preg_replace('/[^+0-9]/', '', $contactPhone); ?>
+    <p><a href="tel:<?= e($phoneHref) ?>"><?= e($contactPhone) ?></a></p>
+<?php endif; ?>
+<?php if ($contactEmail !== ''): ?>
+    <p><a href="mailto:<?= e($contactEmail) ?>"><?= e($contactEmail) ?></a></p>
+<?php endif; ?>
 <?php if (isset($page['intro']) && is_array($page['intro'])): ?>
     <?php render_intro($page['intro']); ?>
 <?php endif; ?>
 <?php if ($contactResult['success']): ?>
-    <p class="notice"><?= e($page['success_message'] ?? 'Bedankt, je bericht werd verzonden.') ?></p>
+    <p class="notice"><?= rich_text_html((string) ($page['success_message'] ?? 'Bedankt, je bericht werd verzonden.')) ?></p>
 <?php endif; ?>
 <?php if ($contactResult['errors'] !== []): ?>
     <div class="notice is-error">

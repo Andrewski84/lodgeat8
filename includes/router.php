@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 function requested_page_key(): string
 {
+    // Routes are stored as simple content keys, so keep the incoming value
+    // restricted to the same character set used by the JSON structure.
     if (!isset($_GET['p'])) {
         return 'home';
     }
@@ -12,6 +14,8 @@ function requested_page_key(): string
 
 function resolve_page(array $config, string $pageKey): array
 {
+    // Rooms behave like pages but are stored separately so admin editing can
+    // share gallery and booking logic across all rooms.
     if (isset($config['rooms'][$pageKey])) {
         return [
             'key' => $pageKey,

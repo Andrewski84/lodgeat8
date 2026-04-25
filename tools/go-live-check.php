@@ -87,6 +87,36 @@ $checkWritableDir(base_path('assets/img'), 'assets/img/');
 
 $content = load_content();
 
+// Keep the deployment check strict about common editor/test artifacts so the
+// site is not published with leftover local content.
+$contentStrings = [];
+$collectStrings = static function ($value, string $path = '') use (&$collectStrings, &$contentStrings): void {
+    if (is_array($value)) {
+        foreach ($value as $key => $item) {
+            $collectStrings($item, $path === '' ? (string) $key : $path . '.' . $key);
+        }
+
+        return;
+    }
+
+    if (is_string($value)) {
+        $contentStrings[$path] = $value;
+    }
+};
+$collectStrings($content);
+
+foreach ($contentStrings as $path => $value) {
+    $plain = trim(html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+    if (strcasecmp($plain, 'test') === 0) {
+        $add($warnings, 'Mogelijke testcontent gevonden in ' . $path . '.');
+    }
+
+    if (str_contains($value, '<strong><strong>') || str_contains($value, '<a></a>') || str_contains($value, '&amp;amp;')) {
+        $add($warnings, 'Mogelijk rich-text artefact gevonden in ' . $path . '.');
+    }
+}
+
 foreach (['site', 'pages', 'rooms', 'galleries', 'backgrounds', 'navigation', 'footer_navigation'] as $key) {
     if (!isset($content[$key]) || !is_array($content[$key])) {
         $add($errors, 'Contentstructuur mist array: ' . $key);

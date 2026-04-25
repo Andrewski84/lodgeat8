@@ -67,13 +67,13 @@ function beheer_page_fields(array $page, bool $withIntro = true, bool $withSucce
         <?php if ($withIntro): ?>
             <label>
                 Tekst
-                <textarea name="translations[<?= e($language) ?>][intro]" rows="9"><?= e(admin_text_from_lines(admin_translated_lines($page, 'intro', $language))) ?></textarea>
+                <textarea name="translations[<?= e($language) ?>][intro]" rows="9" data-rich-text><?= e(admin_text_from_lines(admin_translated_lines($page, 'intro', $language))) ?></textarea>
             </label>
         <?php endif; ?>
         <?php if ($withSuccess): ?>
             <label>
                 Bericht na verzenden
-                <textarea name="translations[<?= e($language) ?>][success_message]" rows="3"><?= e(admin_translated_text($page, 'success_message', $language)) ?></textarea>
+                <textarea name="translations[<?= e($language) ?>][success_message]" rows="3" data-rich-text><?= e(admin_translated_text($page, 'success_message', $language)) ?></textarea>
             </label>
         <?php endif; ?>
         <?php
@@ -101,7 +101,7 @@ function beheer_list_editor(string $name, array $items, string $label, string $p
     <div class="list-editor" data-list-editor>
         <div class="list-editor-head">
             <span><?= e($label) ?></span>
-            <button type="button" class="secondary-button" data-list-add>Toevoegen</button>
+            <button type="button" class="secondary-button" data-list-add>Rij toevoegen</button>
         </div>
         <div class="list-items" data-list-items>
             <?php foreach ($items as $item): ?>
@@ -123,35 +123,108 @@ function beheer_list_editor(string $name, array $items, string $label, string $p
     <?php
 }
 
+function beheer_price_editor(string $name, array $pairs): void
+{
+    $rows = [];
+
+    foreach ($pairs as $label => $value) {
+        $cleanLabel = trim((string) $label);
+        $cleanValue = trim((string) $value);
+
+        if ($cleanLabel !== '' || $cleanValue !== '') {
+            $rows[] = [
+                'label' => $cleanLabel,
+                'value' => $cleanValue,
+            ];
+        }
+    }
+
+    if ($rows === []) {
+        $rows[] = [
+            'label' => '',
+            'value' => '',
+        ];
+    }
+    ?>
+    <div class="price-editor" data-price-editor>
+        <div class="price-editor-head">
+            <span>Kamerprijzen</span>
+            <button type="button" class="secondary-button" data-price-add>Rij toevoegen</button>
+        </div>
+        <div class="price-editor-table">
+            <div class="price-editor-row price-editor-row-head" aria-hidden="true">
+                <span>Label</span>
+                <span>Prijs</span>
+                <span></span>
+            </div>
+            <div class="price-editor-body" data-price-list>
+                <?php foreach ($rows as $row): ?>
+                    <div class="price-editor-row" data-price-row>
+                        <input name="<?= e($name) ?>[label][]" value="<?= e($row['label']) ?>" placeholder="1 persoon">
+                        <input name="<?= e($name) ?>[value][]" value="<?= e($row['value']) ?>" placeholder="100 euro">
+                        <button type="button" class="icon-button is-danger" data-price-remove aria-label="Prijsrij verwijderen">&times;</button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <template data-price-template>
+            <div class="price-editor-row" data-price-row>
+                <input name="<?= e($name) ?>[label][]" value="" placeholder="1 persoon">
+                <input name="<?= e($name) ?>[value][]" value="" placeholder="100 euro">
+                <button type="button" class="icon-button is-danger" data-price-remove aria-label="Prijsrij verwijderen">&times;</button>
+            </div>
+        </template>
+        <small>Voorbeeld: 1 persoon / 100 euro</small>
+    </div>
+    <?php
+}
+
 function beheer_room_fields(array $room): void
 {
     beheer_language_tabs(function (string $language, string $label) use ($room): void {
+        $roomTitle = admin_translated_text($room, 'title', $language);
+        $roomNavTitle = admin_translated_text($room, 'nav_title', $language);
+
+        if ($roomNavTitle === '') {
+            $roomNavTitle = $roomTitle;
+        }
         ?>
-        <label>
-            Kamernaam
-            <input name="translations[<?= e($language) ?>][title]" value="<?= e(admin_translated_text($room, 'title', $language)) ?>">
-        </label>
-        <label>
-            Korte tekst
-            <textarea name="translations[<?= e($language) ?>][summary]" rows="3"><?= e(admin_translated_text($room, 'summary', $language)) ?></textarea>
-        </label>
-        <label>
-            Booking link voor "Beschikbaarheid & reservatie"
-            <input name="translations[<?= e($language) ?>][booking_url]" value="<?= e(admin_translated_text($room, 'booking_url', $language)) ?>" placeholder="https://">
-        </label>
-        <?php beheer_list_editor('translations[' . $language . '][features]', admin_translated_lines($room, 'features', $language), 'Voorzieningen', 'Nieuwe voorziening'); ?>
-        <label>
-            Titel boven prijzen
-            <input name="translations[<?= e($language) ?>][prices_heading]" value="<?= e(admin_translated_text($room, 'prices_heading', $language)) ?>">
-        </label>
-        <label>
-            Kamerprijzen
-            <textarea name="translations[<?= e($language) ?>][prices]" rows="4"><?= e(admin_text_from_pairs(admin_translated_pairs($room, 'prices', $language))) ?></textarea>
-        </label>
-        <label>
-            Extra info
-            <textarea name="translations[<?= e($language) ?>][extra_info]" rows="5"><?= e(admin_text_from_lines(admin_translated_lines($room, 'extra_info', $language))) ?></textarea>
-        </label>
+        <div class="admin-edit-section">
+            <div class="inline-fields">
+                <label>
+                    Header kamernaam
+                    <input name="translations[<?= e($language) ?>][nav_title]" value="<?= e($roomNavTitle) ?>">
+                </label>
+                <label>
+                    Kamernaam
+                    <input name="translations[<?= e($language) ?>][title]" value="<?= e($roomTitle) ?>">
+                </label>
+            </div>
+            <label>
+                Korte tekst
+                <textarea name="translations[<?= e($language) ?>][summary]" rows="3" data-rich-text><?= e(admin_translated_text($room, 'summary', $language)) ?></textarea>
+            </label>
+        </div>
+        <div class="admin-edit-section">
+            <label>
+                Booking link voor "Beschikbaarheid & reservatie"
+                <input name="translations[<?= e($language) ?>][booking_url]" value="<?= e(admin_translated_text($room, 'booking_url', $language)) ?>" placeholder="https://">
+            </label>
+            <?php beheer_list_editor('translations[' . $language . '][features]', admin_translated_lines($room, 'features', $language), 'Voorzieningen', 'Nieuwe voorziening'); ?>
+        </div>
+        <div class="admin-edit-section">
+            <label>
+                Titel boven prijzen
+                <input name="translations[<?= e($language) ?>][prices_heading]" value="<?= e(admin_translated_text($room, 'prices_heading', $language)) ?>">
+            </label>
+            <?php beheer_price_editor('translations[' . $language . '][prices]', admin_translated_pairs($room, 'prices', $language)); ?>
+        </div>
+        <div class="admin-edit-section">
+            <label>
+                Extra info
+                <textarea name="translations[<?= e($language) ?>][extra_info]" rows="5" data-rich-text><?= e(admin_text_from_lines(admin_translated_lines($room, 'extra_info', $language))) ?></textarea>
+            </label>
+        </div>
         <?php
     });
 }
@@ -217,19 +290,17 @@ function beheer_photo_grid(string $fieldName, array $items, string $uploadName, 
             </div>
         </div>
         <div class="photo-autosave" data-photo-autosave hidden>
+            <div class="photo-autosave-head">
+                <span class="photo-status-text" data-photo-status>Automatisch bewaren...</span>
+                <button type="button" class="photo-status-close" data-photo-status-close aria-label="Feedback sluiten">&times;</button>
+            </div>
             <div class="photo-progress-line">
                 <div class="photo-progress" data-photo-progress-track aria-hidden="true">
                     <span data-photo-progress></span>
                 </div>
                 <strong data-photo-progress-value>0%</strong>
             </div>
-            <span data-photo-status>Automatisch bewaren...</span>
         </div>
-        <label class="photo-drop-zone" data-photo-drop-zone>
-            <input type="file" name="<?= e($uploadName) ?>[]" accept="image/*" multiple data-photo-input>
-            <span data-photo-drop-label>Sleep foto's hierheen</span>
-            <small>of klik om foto's te kiezen</small>
-        </label>
         <div class="photo-grid" data-photo-grid>
             <?php foreach ($items as $item): ?>
                 <article class="photo-card" draggable="true" data-photo-card>
@@ -257,6 +328,12 @@ function beheer_photo_grid(string $fieldName, array $items, string $uploadName, 
                     <small><?= e($item['file']) ?></small>
                 </article>
             <?php endforeach; ?>
+            <div class="photo-add-card" role="button" tabindex="0" data-photo-drop-zone data-photo-add-card>
+                <input class="photo-add-input" type="file" name="<?= e($uploadName) ?>[]" accept="image/*" multiple data-photo-input>
+                <span class="photo-add-plus" aria-hidden="true">+</span>
+                <span data-photo-drop-label>Foto's toevoegen</span>
+                <small>Klik of sleep foto's hierheen</small>
+            </div>
         </div>
     </section>
     <?php

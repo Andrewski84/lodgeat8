@@ -24,7 +24,7 @@
             </button>
         <?php endforeach; ?>
     </div>
-    <div class="gallery-controls">
+    <div class="gallery-controls" data-gallery-controls>
         <button type="button" data-gallery-prev aria-label="Vorige foto">&lsaquo;</button>
         <button type="button" data-gallery-next aria-label="Volgende foto">&rsaquo;</button>
     </div>
