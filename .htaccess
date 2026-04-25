@@ -1,0 +1,13 @@
+Options -Indexes
+DirectoryIndex index.php
+AddDefaultCharset UTF-8
+
+<FilesMatch "\.(log|md)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
