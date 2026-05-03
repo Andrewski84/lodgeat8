@@ -63,7 +63,11 @@ function admin_controller_state(array $config): array
 
         try {
             if ($action === '' && $_POST === []) {
-                $errors[] = 'Er kwam geen formulierdata binnen. Controleer of de uploads niet groter zijn dan de PHP-limieten.';
+                $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+                $postLimit = admin_upload_post_limit_bytes();
+                $errors[] = $contentLength > 0 && $postLimit > 0 && $contentLength > $postLimit
+                    ? admin_upload_limit_message($contentLength)
+                    : 'Er kwam geen formulierdata binnen. Controleer of de uploads niet groter zijn dan de PHP-limieten.';
             } elseif ($action === 'setup') {
                 if (!admin_check_csrf($_POST)) {
                     $errors[] = 'De sessie is verlopen. Herlaad de pagina en probeer opnieuw.';

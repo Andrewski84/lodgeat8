@@ -117,8 +117,8 @@ $checkGitTracked = static function (string $relativePath, string $label) use (&$
     $add($errors, $label . ' bestaat lokaal maar staat niet in git; voeg dit toe aan het deploy-artefact.');
 };
 
-if (PHP_VERSION_ID < 80000) {
-    $add($errors, 'PHP 8.0 of nieuwer is vereist. Gevonden: ' . PHP_VERSION);
+if (PHP_VERSION_ID < 70400) {
+    $add($errors, 'PHP 7.4 of nieuwer is vereist. PHP 8.1 of nieuwer is aanbevolen. Gevonden: ' . PHP_VERSION);
 } elseif (PHP_VERSION_ID < 80100) {
     $add($warnings, 'PHP 8.1 of nieuwer is aanbevolen. Gevonden: ' . PHP_VERSION);
 } else {
@@ -129,6 +129,37 @@ if (function_exists('mail')) {
     $add($ok, 'PHP mail() is beschikbaar voor contact- en resetmails.');
 } else {
     $add($warnings, 'PHP mail() is niet beschikbaar. Contactmails en wachtwoordresetmails kunnen dan niet worden verzonden.');
+}
+
+$fileUploadsEnabled = in_array(strtolower((string) ini_get('file_uploads')), ['1', 'on', 'true', 'yes'], true);
+$uploadFileLimit = admin_upload_file_limit_bytes();
+$uploadPostLimit = admin_upload_post_limit_bytes();
+$effectiveUploadLimit = admin_effective_upload_limit_bytes();
+
+if ($fileUploadsEnabled) {
+    $add($ok, 'PHP file_uploads is actief.');
+} else {
+    $add($errors, 'PHP file_uploads staat uit; foto-uploads in beheer zullen mislukken.');
+}
+
+if ($uploadFileLimit > 0) {
+    $add($ok, 'upload_max_filesize: ' . admin_format_bytes($uploadFileLimit) . '.');
+} else {
+    $add($warnings, 'upload_max_filesize kon niet betrouwbaar worden gelezen.');
+}
+
+if ($uploadPostLimit > 0) {
+    $add($ok, 'post_max_size: ' . admin_format_bytes($uploadPostLimit) . '.');
+} else {
+    $add($warnings, 'post_max_size kon niet betrouwbaar worden gelezen.');
+}
+
+if ($uploadFileLimit > 0 && $uploadPostLimit > 0 && $uploadPostLimit < $uploadFileLimit) {
+    $add($warnings, 'post_max_size is kleiner dan upload_max_filesize; grotere foto-uploads kunnen leeg binnenkomen.');
+}
+
+if ($effectiveUploadLimit > 0 && $effectiveUploadLimit < 2 * 1024 * 1024) {
+    $add($warnings, 'Effectieve uploadlimiet is laag (' . admin_format_bytes($effectiveUploadLimit) . '). Grote foto\'s zullen mislukken.');
 }
 
 foreach ([

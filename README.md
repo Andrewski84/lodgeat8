@@ -4,7 +4,8 @@ A small, self-contained PHP website for Lodging at 8. The project includes a pub
 
 ## Requirements
 
-- PHP 8.1 or newer is recommended.
+- PHP 7.4 or newer is required; PHP 8.1 or newer is recommended.
+- PHP file uploads must be enabled. Set `upload_max_filesize` and `post_max_size` high enough for the largest image you want to upload.
 - The `storage/` directory must be writable by PHP.
 - The `assets/img/` directory and its subdirectories must be writable by PHP if images are uploaded or physically deleted through the admin area.
 - Apache should use the included `.htaccess` file in production.

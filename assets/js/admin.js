@@ -1,7 +1,9 @@
 const photoRequests = new WeakMap();
 const photoSaveTimers = new WeakMap();
 const photoHideTimers = new WeakMap();
+const activePhotoManagers = new Set();
 const saveFeedbackVisibleMs = 2000;
+const photoUploadTimeoutMs = 180000;
 
 // Shared dirty-state handling. Any editable admin form can reveal its save bar
 // and trigger the unsaved-changes modal before internal navigation.
@@ -112,6 +114,129 @@ const isInternalAdminUrl = (href) => {
         && (targetPath.includes('/beheer/') || targetPath === currentPath);
 };
 
+const formHasActivePhotoSave = (form) => Array.from(activePhotoManagers)
+    .some((manager) => manager.closest('form') === form);
+
+const setPhotoSaveActive = (manager, active) => {
+    const form = manager?.closest('form');
+
+    if (!form) {
+        return;
+    }
+
+    if (active) {
+        activePhotoManagers.add(manager);
+    } else {
+        activePhotoManagers.delete(manager);
+    }
+
+    form.classList.toggle('is-photo-autosaving', formHasActivePhotoSave(form));
+};
+
+const finishPhotoRequest = (manager, xhr) => {
+    if (photoRequests.get(manager) !== xhr) {
+        return false;
+    }
+
+    photoRequests.delete(manager);
+    setPhotoSaveActive(manager, false);
+
+    return true;
+};
+
+const removePhotoManagerFields = (formData, manager) => {
+    const fieldName = manager?.dataset?.photoField || '';
+
+    if (fieldName === '') {
+        return;
+    }
+
+    [`${fieldName}[file][]`, `${fieldName}[title][]`, `${fieldName}[remove][]`]
+        .forEach((name) => formData.delete(name));
+};
+
+const photoUploadLimit = (manager) => {
+    const limit = Number.parseInt(manager?.dataset?.photoUploadLimit || '0', 10);
+
+    return Number.isFinite(limit) && limit > 0 ? limit : 0;
+};
+
+const formatBytes = (bytes) => {
+    if (bytes >= 1024 * 1024) {
+        return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',').replace(',0', '')} MB`;
+    }
+
+    if (bytes >= 1024) {
+        return `${(bytes / 1024).toFixed(1).replace('.', ',').replace(',0', '')} KB`;
+    }
+
+    return `${bytes} bytes`;
+};
+
+const validatePhotoFiles = (manager, files) => {
+    const limit = photoUploadLimit(manager);
+
+    if (limit <= 0) {
+        return true;
+    }
+
+    const oversized = files.find((file) => file.size > limit);
+
+    if (!oversized) {
+        return true;
+    }
+
+    setPhotoStatus(
+        manager,
+        `${oversized.name} is groter dan de serverlimiet (${formatBytes(limit)}). Verklein de foto en probeer opnieuw.`,
+        'error',
+        100,
+    );
+
+    return false;
+};
+
+const photoRequestErrorMessage = (xhr, response) => {
+    if (Array.isArray(response.errors) && response.errors.length) {
+        return response.errors.join(' ');
+    }
+
+    if (xhr.status === 413) {
+        return 'De upload is te groot voor deze server. Upload minder foto\'s tegelijk of verklein de bestanden.';
+    }
+
+    if (xhr.status === 401 || xhr.status === 403) {
+        return 'Je beheersessie is verlopen. Meld je opnieuw aan en probeer de upload opnieuw.';
+    }
+
+    if (xhr.status >= 500) {
+        return `De server kon de upload niet verwerken (HTTP ${xhr.status}). Controleer de serverlog en de rechten op assets/img.`;
+    }
+
+    if (xhr.status > 0) {
+        return `Automatisch bewaren is mislukt (HTTP ${xhr.status}).`;
+    }
+
+    return 'De upload werd onderbroken. Controleer je verbinding en probeer opnieuw met minder of kleinere foto\'s.';
+};
+
+const adminAjaxUrl = (form) => {
+    try {
+        const url = new URL(window.location.href);
+        const section = new FormData(form).get('section');
+
+        url.hash = '';
+
+        if (typeof section === 'string' && section !== '') {
+            url.searchParams.set('section', section);
+        }
+
+        return url.toString();
+    } catch (_error) {
+        return form?.action || window.location.href;
+    }
+};
+
 const hidePhotoStatus = (manager) => {
     const autosave = manager?.querySelector('[data-photo-autosave]');
 
@@ -188,7 +313,12 @@ document.querySelectorAll('.admin-layout form').forEach((form) => {
         }
     });
 
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+        if (formHasActivePhotoSave(form)) {
+            event.preventDefault();
+            return;
+        }
+
         isSubmittingForm = true;
         clearUnsavedChanges();
     });
@@ -1089,12 +1219,15 @@ document.querySelectorAll('textarea[data-rich-text]').forEach((textarea) => {
 
 // Photo grids autosave ordering, captions, deletes and uploads. Each manager is
 // independent so the same code works for Leuven and all room galleries.
-const autoSavePhotoManager = (manager, options = {}) => {
+const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) => {
     const form = manager?.closest('form');
 
     if (!manager || !form) {
+        resolve({ success: false });
         return;
     }
+
+    window.clearTimeout(photoSaveTimers.get(manager));
 
     const previousRequest = photoRequests.get(manager);
 
@@ -1108,29 +1241,45 @@ const autoSavePhotoManager = (manager, options = {}) => {
     const reloadAfterSuccess = options.reloadAfterSuccess === true;
     const uploadFiles = Array.isArray(options.files) ? options.files : [];
     const uploadName = options.uploadName || '';
+    const statusMessage = options.statusMessage || (isUpload ? 'Foto\'s uploaden...' : 'Foto\'s automatisch bewaren...');
+    const progressStart = typeof options.progressStart === 'number' ? Math.max(0, Math.min(100, options.progressStart)) : 0;
+    const progressEnd = typeof options.progressEnd === 'number' ? Math.max(0, Math.min(100, options.progressEnd)) : 100;
+    const progressRange = Math.max(0, progressEnd - progressStart);
 
     if (isUpload && uploadName !== '') {
         formData.delete(uploadName);
         uploadFiles.forEach((file) => formData.append(uploadName, file, file.name));
+
+        if (options.appendOnly === true) {
+            removePhotoManagerFields(formData, manager);
+        }
     }
 
     photoRequests.set(manager, xhr);
-    setPhotoStatus(manager, isUpload ? 'Foto\'s uploaden...' : 'Foto\'s automatisch bewaren...', 'busy', isUpload ? 0 : null);
+    setPhotoSaveActive(manager, true);
+    setPhotoStatus(manager, statusMessage, 'busy', isUpload ? progressStart : null);
 
     xhr.upload.addEventListener('progress', (event) => {
         if (!isUpload || !event.lengthComputable) {
             return;
         }
 
-        setPhotoStatus(manager, 'Foto\'s uploaden...', 'busy', (event.loaded / event.total) * 100);
+        setPhotoStatus(manager, statusMessage, 'busy', progressStart + ((event.loaded / event.total) * progressRange));
     });
 
-    xhr.addEventListener('load', () => {
-        if (photoRequests.get(manager) !== xhr) {
+    xhr.upload.addEventListener('load', () => {
+        if (!isUpload) {
             return;
         }
 
-        photoRequests.delete(manager);
+        setPhotoStatus(manager, statusMessage.replace('uploaden', 'verwerken'), 'busy', progressEnd);
+    });
+
+    xhr.addEventListener('load', () => {
+        if (!finishPhotoRequest(manager, xhr)) {
+            resolve({ success: false, ignored: true });
+            return;
+        }
 
         let response = { success: xhr.status >= 200 && xhr.status < 300 };
 
@@ -1140,42 +1289,113 @@ const autoSavePhotoManager = (manager, options = {}) => {
             response.success = xhr.status >= 200 && xhr.status < 300;
         }
 
+        if (response === null || typeof response !== 'object' || Array.isArray(response)) {
+            response = { success: xhr.status >= 200 && xhr.status < 300 };
+        }
+
         if (xhr.status >= 200 && xhr.status < 300 && response.success !== false) {
             const successMessage = Array.isArray(response.messages) && response.messages.length
                 ? response.messages.join(' ')
-                : (isUpload ? 'Upload opgeslagen. Foto’s laden...' : 'Automatisch opgeslagen.');
+                : (isUpload ? 'Upload opgeslagen. Foto\'s laden...' : 'Automatisch opgeslagen.');
 
-            setPhotoStatus(manager, successMessage, 'success', 100);
+            if (options.deferSuccessStatus !== true) {
+                setPhotoStatus(manager, successMessage, 'success', 100);
+            }
+
             clearUnsavedChanges(form);
 
             if (reloadAfterSuccess) {
                 window.setTimeout(() => window.location.reload(), 850);
             }
 
+            resolve({ success: true, response });
             return;
         }
 
-        const errorMessage = Array.isArray(response.errors) && response.errors.length
-            ? response.errors.join(' ')
-            : 'Automatisch bewaren is mislukt.';
+        const errorMessage = photoRequestErrorMessage(xhr, response);
 
         setPhotoStatus(manager, errorMessage, 'error', 100);
+        resolve({ success: false, response, error: errorMessage, status: xhr.status });
     });
 
     xhr.addEventListener('error', () => {
-        photoRequests.delete(manager);
-        setPhotoStatus(manager, 'Automatisch bewaren is mislukt.', 'error', 100);
+        if (!finishPhotoRequest(manager, xhr)) {
+            resolve({ success: false, ignored: true });
+            return;
+        }
+
+        const errorMessage = photoRequestErrorMessage(xhr, {});
+        setPhotoStatus(manager, errorMessage, 'error', 100);
+        resolve({ success: false, error: errorMessage, status: xhr.status });
+    });
+
+    xhr.addEventListener('timeout', () => {
+        if (!finishPhotoRequest(manager, xhr)) {
+            resolve({ success: false, ignored: true });
+            return;
+        }
+
+        const errorMessage = 'De server reageert te traag op de upload. Probeer opnieuw met minder of kleinere foto\'s.';
+        setPhotoStatus(manager, errorMessage, 'error', 100);
+        resolve({ success: false, error: errorMessage, timeout: true });
     });
 
     xhr.addEventListener('abort', () => {
-        if (photoRequests.get(manager) === xhr) {
-            photoRequests.delete(manager);
-        }
+        const wasCurrent = finishPhotoRequest(manager, xhr);
+        resolve({ success: false, aborted: wasCurrent });
     });
 
-    xhr.open((form.method || 'POST').toUpperCase(), form.action || window.location.href, true);
+    xhr.open((form.method || 'POST').toUpperCase(), adminAjaxUrl(form), true);
+    xhr.timeout = options.timeoutMs || photoUploadTimeoutMs;
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
     xhr.send(formData);
+});
+
+const uploadPhotoFiles = async (manager, files, uploadName) => {
+    const form = manager?.closest('form');
+
+    if (!manager || !form || !files.length) {
+        return;
+    }
+
+    const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+    let uploadedBytes = 0;
+
+    for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        const progressStart = totalBytes > 0 ? (uploadedBytes / totalBytes) * 100 : (index / files.length) * 100;
+        const progressEnd = totalBytes > 0
+            ? ((uploadedBytes + file.size) / totalBytes) * 100
+            : ((index + 1) / files.length) * 100;
+        const statusMessage = files.length > 1
+            ? `Foto ${index + 1}/${files.length} uploaden...`
+            : 'Foto\'s uploaden...';
+
+        const result = await autoSavePhotoManager(manager, {
+            appendOnly: true,
+            deferSuccessStatus: true,
+            files: [file],
+            progressEnd,
+            progressStart,
+            statusMessage,
+            upload: true,
+            uploadName,
+        });
+
+        if (!result.success) {
+            return;
+        }
+
+        uploadedBytes += file.size;
+    }
+
+    const message = files.length === 1
+        ? 'Upload opgeslagen. Foto\'s laden...'
+        : `${files.length} foto\'s opgeslagen. Foto\'s laden...`;
+
+    setPhotoStatus(manager, message, 'success', 100);
+    clearUnsavedChanges(form);
+    window.setTimeout(() => window.location.reload(), 850);
 };
 
 const schedulePhotoAutosave = (manager, options = {}) => {
@@ -1395,14 +1615,13 @@ document.querySelectorAll('[data-photo-drop-zone]').forEach((dropZone) => {
             return;
         }
 
+        if (!validatePhotoFiles(manager, files)) {
+            return;
+        }
+
         updateLabel(files.length);
         markUnsavedChanges(dropZone);
-        autoSavePhotoManager(manager, {
-            files,
-            upload: true,
-            uploadName: input.name,
-            reloadAfterSuccess: true,
-        });
+        uploadPhotoFiles(manager, files, input.name);
     });
 
     input.addEventListener('change', () => {
@@ -1410,13 +1629,12 @@ document.querySelectorAll('[data-photo-drop-zone]').forEach((dropZone) => {
         updateLabel(files.length);
 
         if (files.length) {
+            if (!validatePhotoFiles(manager, files)) {
+                return;
+            }
+
             markUnsavedChanges(input);
-            autoSavePhotoManager(manager, {
-                files,
-                upload: true,
-                uploadName: input.name,
-                reloadAfterSuccess: true,
-            });
+            uploadPhotoFiles(manager, files, input.name);
         }
     });
 });

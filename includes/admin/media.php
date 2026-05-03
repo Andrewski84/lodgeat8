@@ -69,7 +69,7 @@ function admin_delete_unreferenced_media(array $files, array $content): array
         $target = $directoryPrefix . $file;
         $targetPath = realpath($target);
 
-        if ($targetPath === false || !str_starts_with($targetPath, $directoryPrefix)) {
+        if ($targetPath === false || substr($targetPath, 0, strlen($directoryPrefix)) !== $directoryPrefix) {
             continue;
         }
 
@@ -112,6 +112,96 @@ function admin_flush_media_deletions(array $content): array
     ];
 }
 
+function admin_ini_size_to_bytes(string $value): int
+{
+    $value = trim($value);
+
+    if ($value === '') {
+        return 0;
+    }
+
+    $number = (float) $value;
+
+    if ($number <= 0) {
+        return 0;
+    }
+
+    $unit = strtolower(substr($value, -1));
+    $multiplier = 1;
+
+    if ($unit === 'g') {
+        $multiplier = 1024 * 1024 * 1024;
+    } elseif ($unit === 'm') {
+        $multiplier = 1024 * 1024;
+    } elseif ($unit === 'k') {
+        $multiplier = 1024;
+    }
+
+    return (int) round($number * $multiplier);
+}
+
+function admin_format_bytes(int $bytes): string
+{
+    if ($bytes >= 1024 * 1024) {
+        return rtrim(rtrim(number_format($bytes / (1024 * 1024), 1, ',', ''), '0'), ',') . ' MB';
+    }
+
+    if ($bytes >= 1024) {
+        return rtrim(rtrim(number_format($bytes / 1024, 1, ',', ''), '0'), ',') . ' KB';
+    }
+
+    return $bytes . ' bytes';
+}
+
+function admin_upload_post_limit_bytes(): int
+{
+    return admin_ini_size_to_bytes((string) ini_get('post_max_size'));
+}
+
+function admin_upload_file_limit_bytes(): int
+{
+    return admin_ini_size_to_bytes((string) ini_get('upload_max_filesize'));
+}
+
+function admin_effective_upload_limit_bytes(): int
+{
+    $limits = array_filter([
+        admin_upload_post_limit_bytes(),
+        admin_upload_file_limit_bytes(),
+    ], static function (int $limit): bool {
+        return $limit > 0;
+    });
+
+    return $limits === [] ? 0 : min($limits);
+}
+
+function admin_upload_limit_message(int $contentLength = 0): string
+{
+    $limits = [];
+    $postLimit = admin_upload_post_limit_bytes();
+    $fileLimit = admin_upload_file_limit_bytes();
+
+    if ($postLimit > 0) {
+        $limits[] = 'request maximaal ' . admin_format_bytes($postLimit);
+    }
+
+    if ($fileLimit > 0) {
+        $limits[] = 'bestand maximaal ' . admin_format_bytes($fileLimit);
+    }
+
+    $message = 'De upload is te groot voor deze server';
+
+    if ($contentLength > 0) {
+        $message .= ' (' . admin_format_bytes($contentLength) . ')';
+    }
+
+    if ($limits !== []) {
+        $message .= '; limiet: ' . implode(', ', $limits);
+    }
+
+    return $message . '. Upload minder foto\'s tegelijk of verklein de bestanden.';
+}
+
 function admin_upload_images(array $files, string $directory = ''): array
 {
     if (($files['name'] ?? []) === []) {
@@ -135,7 +225,7 @@ function admin_upload_images(array $files, string $directory = ''): array
     }
 
     $errorMessages = [
-        UPLOAD_ERR_INI_SIZE => 'De afbeelding is groter dan de serverlimiet.',
+        UPLOAD_ERR_INI_SIZE => admin_upload_limit_message(),
         UPLOAD_ERR_FORM_SIZE => 'De afbeelding is groter dan toegestaan.',
         UPLOAD_ERR_PARTIAL => 'De afbeelding werd maar gedeeltelijk opgeladen.',
         UPLOAD_ERR_NO_TMP_DIR => 'De tijdelijke uploadmap ontbreekt op de server.',

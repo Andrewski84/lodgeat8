@@ -65,6 +65,31 @@ function image_path(string $file): string
     return asset('img/' . ltrim(str_replace('\\', '/', $file), '/'));
 }
 
+function gallery_items_for_display(array $gallery): array
+{
+    $items = [];
+
+    foreach ($gallery as $item) {
+        $file = is_array($item) ? (string) ($item['file'] ?? '') : (string) $item;
+        $file = ltrim(str_replace('\\', '/', $file), '/');
+
+        if ($file === '' || preg_match('#(^|/)\.\.(/|$)#', $file) === 1) {
+            continue;
+        }
+
+        if (!is_file(base_path('assets/img/' . $file))) {
+            continue;
+        }
+
+        $items[] = [
+            'file' => $file,
+            'alt' => is_array($item) ? (string) ($item['title'] ?? $item['alt'] ?? '') : '',
+        ];
+    }
+
+    return $items;
+}
+
 function ui_text(string $key, ?string $language = null): string
 {
     if ($language === null) {

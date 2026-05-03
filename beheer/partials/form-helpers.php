@@ -282,7 +282,12 @@ function beheer_photo_grid(string $fieldName, array $items, string $uploadName, 
 {
     $items = admin_normalize_media_items($items);
     ?>
-    <section class="photo-manager" data-photo-manager>
+    <section
+        class="photo-manager"
+        data-photo-manager
+        data-photo-field="<?= e($fieldName) ?>"
+        data-photo-upload-limit="<?= e((string) admin_effective_upload_limit_bytes()) ?>"
+    >
         <div class="photo-manager-head">
             <div>
                 <h3><?= e($title) ?></h3>

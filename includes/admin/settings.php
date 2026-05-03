@@ -86,7 +86,26 @@ function admin_username(): string
 
 function admin_script_url(): string
 {
-    return (string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php');
+    if (PHP_SAPI === 'cli') {
+        return 'index.php';
+    }
+
+    $requestPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+    $requestPath = str_replace('\\', '/', (string) ($requestPath ?: ($_SERVER['SCRIPT_NAME'] ?? 'index.php')));
+
+    if ($requestPath === '' || $requestPath === '/') {
+        return 'index.php';
+    }
+
+    if (substr($requestPath, -1) === '/') {
+        return $requestPath . 'index.php';
+    }
+
+    if (basename($requestPath) === 'index.php') {
+        return $requestPath;
+    }
+
+    return rtrim($requestPath, '/') . '/index.php';
 }
 
 function admin_absolute_script_url(): string
@@ -116,6 +135,7 @@ function admin_sections(): array
 {
     return [
         'algemeen' => 'Algemeen',
+        'home' => 'Home',
         'leuven' => 'Leuven',
         'kamer-1' => 'Room 1',
         'kamer-2' => 'Room 2',

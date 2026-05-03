@@ -2,8 +2,8 @@
     <div class="gallery-frame">
         <?php foreach ($gallery as $index => $item): ?>
             <?php
-            $file = is_array($item) ? (string) ($item['file'] ?? '') : (string) $item;
-            $alt = is_array($item) ? (string) ($item['title'] ?? $item['alt'] ?? '') : '';
+            $file = (string) ($item['file'] ?? '');
+            $alt = (string) ($item['alt'] ?? '');
 
             if ($file === '') {
                 continue;

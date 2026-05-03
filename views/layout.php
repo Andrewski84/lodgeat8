@@ -27,10 +27,14 @@
             }
         }
     }
+
+    $gallery = isset($page['gallery'], $config['galleries'][$page['gallery']])
+        ? gallery_items_for_display((array) $config['galleries'][$page['gallery']])
+        : [];
     ?>
 
     <main class="site-main">
-        <section class="content-sheet <?= isset($page['gallery']) ? 'has-media' : 'single-column' ?> content-<?= e($page['type']) ?>">
+        <section class="content-sheet <?= $gallery !== [] ? 'has-media' : 'single-column' ?> content-<?= e($page['type']) ?>">
             <div class="content-column">
                 <h1><?= e($page['title']) ?></h1>
                 <hr>
@@ -38,9 +42,8 @@
                 <?php require __DIR__ . '/page.php'; ?>
             </div>
 
-            <?php if (isset($page['gallery'], $config['galleries'][$page['gallery']])): ?>
+            <?php if ($gallery !== []): ?>
                 <div class="media-column">
-                    <?php $gallery = $config['galleries'][$page['gallery']]; ?>
                     <?php require __DIR__ . '/partials/gallery.php'; ?>
                 </div>
             <?php endif; ?>

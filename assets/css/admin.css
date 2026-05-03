@@ -1015,6 +1015,13 @@ select:focus {
     visibility: visible;
 }
 
+.admin-form.has-unsaved-changes.is-photo-autosaving .save-bar {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    visibility: hidden;
+}
+
 .link-editor {
     display: grid;
     grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
