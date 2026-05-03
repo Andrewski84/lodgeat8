@@ -1,0 +1,342 @@
+{
+    "kamer-1": {
+        "title": "1",
+        "summary": "",
+        "image": "kamer-1/CRW_7055.jpg",
+        "gallery": "kamer-1",
+        "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22492",
+        "features": [
+            "‘Badkamer met zicht’",
+            "Douche en wc",
+            "Koelkast",
+            "dubbel bed 1m80 breed",
+            "Ergonomische hoofdkussens",
+            "Kabeltelevisie en dvd-speler",
+            "Internet",
+            "Bedlinnen en handdoeken",
+            "Balkon en dakterras",
+            "Volledig gerenoveerde kamer,",
+            "Hedendaagse inrichting"
+        ],
+        "prices_heading": "",
+        "prices": [],
+        "extra_info": [
+            "Inclusief ontbijt, wi-fi en taksen.",
+            "Privé autostaanplaatsen aan 15 euro/nacht",
+            "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag.",
+            "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+        ],
+        "translations": {
+            "en": {
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=22492",
+                "prices_heading": "",
+                "extra_info": [
+                    "Breakfast, Wi-Fi and taxes included.",
+                    "Private parking places at 15 euro/night",
+                    "Free transportation from and to the railway station/airport upon request.",
+                    "( for stays of two nights and not between 7:00 and 10: 00h AM)"
+                ],
+                "title": "1",
+                "features": [
+                    "Bathroom with a view",
+                    "Private shower and toilet",
+                    "Refrigerator",
+                    "Double bed (1m80 x 2 m)",
+                    "Ergonomic pillows",
+                    "Flatscreen, cable, DVD-player",
+                    "Internet connection",
+                    "Linnen and towels",
+                    "Balcony and access to roofterrace",
+                    "Fully renovated room",
+                    "Contemporary design"
+                ],
+                "prices": [],
+                "summary": "",
+                "nav_title": "Room 1"
+            },
+            "fr": {
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=22492",
+                "prices_heading": "",
+                "extra_info": [
+                    "Petit déjeuner, Wi-Fi et taxes inclus.",
+                    "Parkings privé à 15 euro/nuit",
+                    "Transport gratuit depuis et vers la gare / aéroport sur demande.",
+                    "(Pour les séjours au moins de deux nuits, et pas entre 7h00 et 10h00 AM )"
+                ],
+                "title": "1",
+                "features": [
+                    "‘Salle de bain avec vue’",
+                    "Douche et wc",
+                    "Frigo",
+                    "Double lit 1m80 de large",
+                    "Oreiller ergonomique",
+                    "Télé avec télédistribution et lecteur DVD",
+                    "Internet",
+                    "Draps et serviettes",
+                    "Balcon",
+                    "Petit déjeuner sur demande, dans la chambre ou dans l’espace ‘petit-déjeuner’",
+                    "Chambre complètement rénovée",
+                    "Aménagement contemporain"
+                ],
+                "prices": [],
+                "summary": "",
+                "nav_title": "Chambre 1"
+            },
+            "nl": {
+                "title": "1",
+                "summary": "",
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22492",
+                "features": [
+                    "‘Badkamer met zicht’",
+                    "Douche en wc",
+                    "Koelkast",
+                    "dubbel bed 1m80 breed",
+                    "Ergonomische hoofdkussens",
+                    "Kabeltelevisie en dvd-speler",
+                    "Internet",
+                    "Bedlinnen en handdoeken",
+                    "Balkon en dakterras",
+                    "Volledig gerenoveerde kamer,",
+                    "Hedendaagse inrichting"
+                ],
+                "prices_heading": "",
+                "prices": [],
+                "extra_info": [
+                    "Inclusief ontbijt, wi-fi en taksen.",
+                    "Privé autostaanplaatsen aan 15 euro/nacht",
+                    "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag.",
+                    "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+                ],
+                "nav_title": "Kamer 1"
+            }
+        },
+        "nav_title": "Kamer 1"
+    },
+    "kamer-2": {
+        "title": "2",
+        "summary": "",
+        "image": "kamer-2/bgstr-room2.jpg",
+        "gallery": "kamer-2",
+        "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=23747",
+        "features": [
+            "‘Badkamer met zicht’",
+            "Douche en wc",
+            "Koelkast",
+            "Dubbel bed 1m80 breed",
+            "Ergonomische hoofdkussens",
+            "Kabeltelevisie en dvd-speler",
+            "Internet",
+            "Bedlinnen en handdoeken",
+            "Dakterras",
+            "Volledig gerenoveerde kamer,",
+            "Hedendaagse inrichting"
+        ],
+        "prices_heading": "",
+        "prices": [],
+        "extra_info": [
+            "Inclusief ontbijt, wi-fi en taksen.",
+            "Privé autostaanplaatsen aan 15 euro/nacht",
+            "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag.",
+            "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+        ],
+        "translations": {
+            "en": {
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=23747",
+                "prices_heading": "",
+                "extra_info": [
+                    "Breakfast, Wi-Fi and taxes included.",
+                    "Private parking places at 15 euro/night",
+                    "Free transportation from and to the railway station/airport upon request.",
+                    "( for stays of two nights and not between 7:00 and 10: 00h AM)"
+                ],
+                "title": "2",
+                "nav_title": "Room 2",
+                "summary": "",
+                "features": [
+                    "‘Bathroom with a view’",
+                    "Private shower and toilet",
+                    "Refrigerator",
+                    "Double bed (1m80 x 2 m)",
+                    "Ergonomic pillows",
+                    "Flatscreen, cable, DVD-player",
+                    "Internet connection",
+                    "Linnen and towels",
+                    "Access to roofterrace",
+                    "Fully renovated room",
+                    "Contemporary design"
+                ],
+                "prices": []
+            },
+            "fr": {
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=23747",
+                "prices_heading": "",
+                "extra_info": [
+                    "Petit déjeuner, Wi-Fi et taxes inclus.",
+                    "Parkings privé à 15 euro/nuit",
+                    "Transport gratuit depuis et vers la gare / aéroport sur demande.",
+                    "(Pour les séjours au moins de deux nuits, et pas entre 7h00 et 10h00 AM )"
+                ],
+                "title": "2",
+                "nav_title": "Chambre 2",
+                "summary": "",
+                "features": [
+                    "‘Salle de bain avec vue’",
+                    "Douche et WC",
+                    "Frigo",
+                    "Double lit 1m80 de large",
+                    "Oreiller ergonomique",
+                    "Télé avec télédistribution et lecteur DVD",
+                    "Internet",
+                    "Draps et serviettes",
+                    "Petit déjeuner sur demande, dans la chambre ou dans l’espace ‘petit-déjeuner’",
+                    "Chambre complètement rénovée",
+                    "Aménagement contemporain"
+                ],
+                "prices": []
+            },
+            "nl": {
+                "title": "2",
+                "nav_title": "Kamer 2",
+                "summary": "",
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=23747",
+                "features": [
+                    "‘Badkamer met zicht’",
+                    "Douche en wc",
+                    "Koelkast",
+                    "Dubbel bed 1m80 breed",
+                    "Ergonomische hoofdkussens",
+                    "Kabeltelevisie en dvd-speler",
+                    "Internet",
+                    "Bedlinnen en handdoeken",
+                    "Dakterras",
+                    "Volledig gerenoveerde kamer,",
+                    "Hedendaagse inrichting"
+                ],
+                "prices_heading": "",
+                "prices": [],
+                "extra_info": [
+                    "Inclusief ontbijt, wi-fi en taksen.",
+                    "Privé autostaanplaatsen aan 15 euro/nacht",
+                    "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag.",
+                    "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+                ]
+            }
+        },
+        "nav_title": "Kamer 2"
+    },
+    "kamer-3": {
+        "title": "3",
+        "summary": "",
+        "image": "kamer-3/CRW_7089.jpg",
+        "gallery": "kamer-3",
+        "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22493",
+        "features": [
+            "Ingericht keukentje",
+            "Douche en wc",
+            "Koelkast",
+            "Dubbel bed 1m80 breed",
+            "Extra 1-persoonsbed",
+            "Ergonomische hoofdkussens",
+            "Kabeltelevisie en dvd-speler",
+            "Internet",
+            "Bedlinnen en handdoeken",
+            "Volledig gerenoveerde kamer,",
+            "Hedendaagse inrichting",
+            "Dakterras"
+        ],
+        "prices_heading": "",
+        "prices": [],
+        "extra_info": [
+            "Inclusief ontbijt, wi-fi en taksen.",
+            "Privé autostaanplaatsen aan 15 euro/nacht",
+            "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag.",
+            "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+        ],
+        "translations": {
+            "en": {
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=22493",
+                "prices_heading": "",
+                "extra_info": [
+                    "Breakfast, Wi-Fi and taxes included.",
+                    "Private parking places at 15 euro/night",
+                    "Free transportation from and to the railway station/airport upon request.",
+                    "( for stays of two nights and not between 7:00 and 10: 00h AM)"
+                ],
+                "title": "3",
+                "nav_title": "Room 3",
+                "summary": "",
+                "features": [
+                    "Small kitchen",
+                    "Private shower and toilet",
+                    "Refrigerator",
+                    "Double bed (1m80 x 2 m)",
+                    "Extra bed single person",
+                    "Ergonomic pillows",
+                    "Tv, cable, DVD-player",
+                    "Internet connection",
+                    "Linnen and towels",
+                    "Access to roofterrace",
+                    "Fully renovated room",
+                    "Contemporary design"
+                ],
+                "prices": []
+            },
+            "fr": {
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=22493",
+                "prices_heading": "",
+                "extra_info": [
+                    "Petit déjeuner, Wi-Fi et taxes inclus.",
+                    "Parkings privé à 15 euro/nuit",
+                    "Transport gratuit depuis et vers la gare / aéroport sur demande.",
+                    "(Pour les séjours au moins de deux nuits, et pas entre 7h00 et 10h00 AM )"
+                ],
+                "title": "3",
+                "nav_title": "Chambre 3",
+                "summary": "",
+                "features": [
+                    "Petite cuisine",
+                    "Douche et WC",
+                    "Frigo",
+                    "Double lit 1m80 de large",
+                    "Oreiller ergonomique",
+                    "Télé avec télédistribution et lecteur DVD",
+                    "Internet",
+                    "Draps et serviettes",
+                    "Petit déjeuner sur demande, dans la chambre ou dans l’espace ‘petit-déjeuner’",
+                    "Chambre complètement rénovée",
+                    "Aménagement contemporain"
+                ],
+                "prices": []
+            },
+            "nl": {
+                "title": "3",
+                "nav_title": "Kamer 3",
+                "summary": "",
+                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22493",
+                "features": [
+                    "Ingericht keukentje",
+                    "Douche en wc",
+                    "Koelkast",
+                    "Dubbel bed 1m80 breed",
+                    "Extra 1-persoonsbed",
+                    "Ergonomische hoofdkussens",
+                    "Kabeltelevisie en dvd-speler",
+                    "Internet",
+                    "Bedlinnen en handdoeken",
+                    "Volledig gerenoveerde kamer,",
+                    "Hedendaagse inrichting",
+                    "Dakterras"
+                ],
+                "prices_heading": "",
+                "prices": [],
+                "extra_info": [
+                    "Inclusief ontbijt, wi-fi en taksen.",
+                    "Privé autostaanplaatsen aan 15 euro/nacht",
+                    "Gratis vervoer van en naar station/luchthaven op eenvoudige vraag.",
+                    "(vanaf een verblijf van 2 nachten en niet tussen 7:00 en 10:00u A.M.)"
+                ]
+            }
+        },
+        "nav_title": "Kamer 3"
+    }
+}

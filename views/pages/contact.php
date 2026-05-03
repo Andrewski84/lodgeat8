@@ -56,6 +56,8 @@ if ($contactIban !== '') {
     </div>
 <?php endif; ?>
 <form class="contact-form" method="post" action="<?= e(url_for('contact')) ?>">
+    <input type="hidden" name="csrf_token" value="<?= e((string) ($contactResult['csrf_token'] ?? '')) ?>">
+    <input type="hidden" name="form_started_at" value="<?= e((string) ($contactResult['form_started_at'] ?? 0)) ?>">
     <label class="form-trap">Website <input name="website" tabindex="-1" autocomplete="off"></label>
     <label><?= e(ui_text('form_name')) ?> <input required name="name" autocomplete="name" value="<?= e($contactResult['values']['name']) ?>"></label>
     <label><?= e(ui_text('form_email')) ?> <input required type="email" name="email" autocomplete="email" value="<?= e($contactResult['values']['email']) ?>"></label>

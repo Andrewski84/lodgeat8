@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Lodging at 8 is een Bed & Breakfast in Leuven, in een karaktervol huis uit 1918.">
     <title><?= e($page['title']) ?> | <?= e($config['site']['name']) ?></title>
+    <?php $siteFavicon = trim((string) ($config['site']['favicon'] ?? '')); ?>
+    <?php if ($siteFavicon !== ''): ?>
+        <link rel="icon" href="<?= e(image_path($siteFavicon)) ?>">
+    <?php endif; ?>
     <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>">
 </head>
 <body class="page-<?= e($pageKey) ?>">
@@ -51,10 +55,10 @@
 
     <?php require __DIR__ . '/partials/footer.php'; ?>
     <?php $languageLabels = supported_languages(); ?>
+    <?php $mobileLanguageCode = strtoupper($currentLanguage); ?>
     <details class="language-picker mobile-floating-language-picker">
         <summary aria-label="Taal kiezen">
-            <span class="language-picker-label"><?= e($languageLabels[$currentLanguage] ?? strtoupper($currentLanguage)) ?></span>
-            <span class="language-picker-icon" aria-hidden="true"></span>
+            <span class="language-picker-label"><?= e($mobileLanguageCode) ?></span>
         </summary>
         <div class="language-menu">
             <?php foreach ($languageLabels as $code => $label): ?>

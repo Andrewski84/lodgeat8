@@ -1141,7 +1141,11 @@ const autoSavePhotoManager = (manager, options = {}) => {
         }
 
         if (xhr.status >= 200 && xhr.status < 300 && response.success !== false) {
-            setPhotoStatus(manager, isUpload ? 'Upload opgeslagen. Foto’s laden...' : 'Automatisch opgeslagen.', 'success', 100);
+            const successMessage = Array.isArray(response.messages) && response.messages.length
+                ? response.messages.join(' ')
+                : (isUpload ? 'Upload opgeslagen. Foto’s laden...' : 'Automatisch opgeslagen.');
+
+            setPhotoStatus(manager, successMessage, 'success', 100);
             clearUnsavedChanges(form);
 
             if (reloadAfterSuccess) {
@@ -1607,8 +1611,8 @@ document.querySelectorAll('[data-link-section-editor]').forEach((editor) => {
 });
 
 document.querySelectorAll('[data-logo-manager]').forEach((manager) => {
-    // Logo management is intentionally a single-image tile: click or Edit opens
-    // the file picker, Delete marks the current logo for removal on save.
+    // Single-image tile picker used for logo and favicon: click or Edit opens
+    // the file picker, Delete marks the current file for removal on save.
     const currentInput = manager.querySelector('[data-logo-current]');
     const removeInput = manager.querySelector('[data-logo-remove-input]');
     const removeButton = manager.querySelector('[data-logo-remove]');

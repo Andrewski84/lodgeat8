@@ -68,6 +68,24 @@ code {
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.12);
 }
 
+.auth-reset {
+    margin-top: 18px;
+    border-top: 1px solid var(--admin-line);
+    padding-top: 16px;
+}
+
+.auth-reset summary {
+    color: var(--admin-accent);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.auth-reset form {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+}
+
 .admin-header {
     display: flex;
     align-items: center;

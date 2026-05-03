@@ -13,14 +13,20 @@ if ($route['status'] !== 200) {
     http_response_code($route['status']);
 }
 
-if (($page['type'] ?? '') === 'contact' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    try {
-        $contactResult = handle_contact_submission($config, $_POST);
-    } catch (Throwable $exception) {
-        $contactResult = contact_empty_result();
-        $contactResult['submitted'] = true;
-        $contactResult['errors'][] = 'Je bericht kon niet worden verzonden. Probeer later opnieuw of mail ons rechtstreeks.';
+if (($page['type'] ?? '') === 'contact') {
+    contact_prepare_runtime();
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        try {
+            $contactResult = handle_contact_submission($config, $_POST);
+        } catch (Throwable $exception) {
+            $contactResult = contact_empty_result();
+            $contactResult['submitted'] = true;
+            $contactResult['errors'][] = 'Je bericht kon niet worden verzonden. Probeer later opnieuw of mail ons rechtstreeks.';
+        }
     }
+
+    $contactResult = contact_result_with_runtime($contactResult);
 }
 
 require __DIR__ . '/views/layout.php';

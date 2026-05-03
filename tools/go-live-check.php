@@ -44,12 +44,91 @@ $checkWritableDir = static function (string $path, string $label) use (&$errors,
     $add($ok, $label . ' is schrijfbaar.');
 };
 
+$checkWritableDirectoryTree = static function (string $path, string $label) use (&$errors, &$ok, $add): void {
+    if (!is_dir($path)) {
+        return;
+    }
+
+    $notWritable = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+
+    foreach ($iterator as $fileInfo) {
+        if (!$fileInfo->isDir()) {
+            continue;
+        }
+
+        if (!$fileInfo->isWritable()) {
+            $notWritable[] = str_replace('\\', '/', substr($fileInfo->getPathname(), strlen($path) + 1));
+        }
+    }
+
+    if ($notWritable === []) {
+        $add($ok, $label . ' submappen zijn schrijfbaar.');
+        return;
+    }
+
+    $add(
+        $errors,
+        $label . ' bevat niet-schrijfbare submappen: '
+            . implode(', ', array_slice($notWritable, 0, 8))
+            . (count($notWritable) > 8 ? ', ...' : '')
+    );
+};
+
+$gitTrackedCache = null;
+$gitTrackedPaths = static function () use (&$gitTrackedCache, $root): array {
+    if ($gitTrackedCache !== null) {
+        return $gitTrackedCache;
+    }
+
+    if (!is_dir($root . '/.git')) {
+        $gitTrackedCache = [];
+        return $gitTrackedCache;
+    }
+
+    $output = [];
+    $exitCode = 0;
+    exec('git -C ' . escapeshellarg($root) . ' ls-files', $output, $exitCode);
+
+    $gitTrackedCache = $exitCode === 0 ? array_fill_keys($output, true) : [];
+
+    return $gitTrackedCache;
+};
+
+$pathIsGitTracked = static function (string $relativePath) use ($gitTrackedPaths): bool {
+    $relativePath = str_replace('\\', '/', ltrim($relativePath, '/'));
+
+    return isset($gitTrackedPaths()[$relativePath]);
+};
+
+$checkGitTracked = static function (string $relativePath, string $label) use (&$errors, &$ok, $add, $pathIsGitTracked, $root): void {
+    if (!is_dir($root . '/.git')) {
+        return;
+    }
+
+    if ($pathIsGitTracked($relativePath)) {
+        $add($ok, $label . ' staat in git.');
+        return;
+    }
+
+    $add($errors, $label . ' bestaat lokaal maar staat niet in git; voeg dit toe aan het deploy-artefact.');
+};
+
 if (PHP_VERSION_ID < 80000) {
     $add($errors, 'PHP 8.0 of nieuwer is vereist. Gevonden: ' . PHP_VERSION);
 } elseif (PHP_VERSION_ID < 80100) {
     $add($warnings, 'PHP 8.1 of nieuwer is aanbevolen. Gevonden: ' . PHP_VERSION);
 } else {
     $add($ok, 'PHP-versie OK: ' . PHP_VERSION);
+}
+
+if (function_exists('mail')) {
+    $add($ok, 'PHP mail() is beschikbaar voor contact- en resetmails.');
+} else {
+    $add($warnings, 'PHP mail() is niet beschikbaar. Contactmails en wachtwoordresetmails kunnen dan niet worden verzonden.');
 }
 
 foreach ([
@@ -59,6 +138,12 @@ foreach ([
     'includes/bootstrap.php',
     'includes/content.php',
     'includes/admin.php',
+    'includes/admin/settings.php',
+    'includes/admin/session.php',
+    'includes/admin/auth.php',
+    'includes/admin/content-helpers.php',
+    'includes/admin/media.php',
+    'includes/admin/content-save.php',
     'views/layout.php',
     'views/pages',
     'views/partials',
@@ -68,6 +153,7 @@ foreach ([
     'assets/js/admin.js',
     'beheer/index.php',
     'beheer/partials/form-helpers.php',
+    'beheer/sections',
 ] as $requiredPath) {
     $checkExists($root . '/' . $requiredPath, $requiredPath);
 }
@@ -77,6 +163,7 @@ foreach ([
     'includes/.htaccess',
     'views/.htaccess',
     'beheer/partials/.htaccess',
+    'beheer/sections/.htaccess',
     'tools/.htaccess',
 ] as $protectedPath) {
     $checkExists($root . '/' . $protectedPath, $protectedPath . ' bescherming');
@@ -84,6 +171,46 @@ foreach ([
 
 $checkWritableDir(storage_path(), 'storage/');
 $checkWritableDir(base_path('assets/img'), 'assets/img/');
+$checkWritableDirectoryTree(base_path('assets/img'), 'assets/img/');
+
+if (is_dir(content_directory_path())) {
+    $add($ok, 'Gesplitste contentmap bestaat: storage/content/.');
+
+    foreach (glob(content_directory_path() . '/*.json') ?: [] as $contentFile) {
+        $relativePath = str_replace('\\', '/', substr($contentFile, strlen($root) + 1));
+        $checkGitTracked($relativePath, $relativePath);
+    }
+} elseif (is_file(content_json_path())) {
+    $add($warnings, 'Legacy contentbestand gevonden: storage/content.json. Bewaren via admin migreert dit automatisch naar storage/content/.');
+} else {
+    $add($warnings, 'Geen content-opslag gevonden in storage/content/ of storage/content.json.');
+}
+
+foreach ([
+    'includes/admin/settings.php',
+    'includes/admin/session.php',
+    'includes/admin/auth.php',
+    'includes/admin/content-helpers.php',
+    'includes/admin/media.php',
+    'includes/admin/content-save.php',
+    'beheer/sections/.htaccess',
+    'beheer/sections/access.php',
+    'beheer/sections/contact.php',
+    'beheer/sections/general.php',
+    'beheer/sections/links.php',
+    'beheer/sections/page.php',
+    'beheer/sections/room.php',
+] as $trackedRuntimePath) {
+    $checkGitTracked($trackedRuntimePath, $trackedRuntimePath);
+}
+
+if (is_file(admin_settings_path())) {
+    if ($pathIsGitTracked('storage/admin.php')) {
+        $add($errors, 'storage/admin.php staat in git. Dit bevat runtime login-instellingen en mag niet worden gedeployed vanuit development.');
+    } else {
+        $add($warnings, 'storage/admin.php bestaat lokaal. Upload dit runtime loginbestand niet vanuit development.');
+    }
+}
 
 $content = load_content();
 
@@ -187,6 +314,18 @@ $referencedMedia = admin_collect_referenced_media($content);
 foreach (array_keys($referencedMedia) as $file) {
     if (!is_file(base_path('assets/img/' . $file))) {
         $add($errors, 'Afbeelding uit JSON ontbreekt in assets/img: ' . $file);
+        continue;
+    }
+
+    $checkGitTracked('assets/img/' . $file, 'Afbeelding uit JSON: assets/img/' . $file);
+}
+
+$siteFavicon = admin_safe_media_filename((string) ($content['site']['favicon'] ?? ''));
+if ($siteFavicon !== '') {
+    if (!is_file(base_path('assets/img/' . $siteFavicon))) {
+        $add($errors, 'Favicon ontbreekt in assets/img: ' . $siteFavicon);
+    } else {
+        $checkGitTracked('assets/img/' . $siteFavicon, 'Favicon: assets/img/' . $siteFavicon);
     }
 }
 

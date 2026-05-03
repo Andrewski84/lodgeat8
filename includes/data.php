@@ -14,6 +14,7 @@ return [
         'business_number' => 'BE 0898 536 239',
         'iban' => 'BE84-0682-4977-8259',
         'logo' => 'site/logo-footer.png',
+        'favicon' => '',
     ],
     'booking_widget' => [
         'enabled' => true,

@@ -15,8 +15,11 @@ $configured = $adminState['configured'];
 $loggedIn = $adminState['loggedIn'];
 $csrfToken = $adminState['csrfToken'];
 $adminUsername = $adminState['adminUsername'];
+$requestedResetEmail = $adminState['requestedResetEmail'];
 $bookingWidget = $adminState['bookingWidget'];
 $siteLogo = $adminState['siteLogo'];
+$siteFavicon = $adminState['siteFavicon'];
+$passwordReset = $adminState['passwordReset'];
 ?>
 <!doctype html>
 <html lang="nl">
@@ -36,11 +39,29 @@ $siteLogo = $adminState['siteLogo'];
                 <?php require __DIR__ . '/partials/messages.php'; ?>
                 <form method="post" action="<?= e(admin_script_url()) ?>">
                     <input type="hidden" name="action" value="setup">
-                    <label>Login <input name="username" required autocomplete="username"></label>
-                    <label>Wachtwoord <input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
-                    <label>Herhaal wachtwoord <input type="password" name="confirm_password" required minlength="8" autocomplete="new-password"></label>
+                    <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                    <label>E-mailadres <input type="email" name="username" required autocomplete="username"></label>
+                    <label>Wachtwoord <input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
+                    <label>Herhaal wachtwoord <input type="password" name="confirm_password" required minlength="10" autocomplete="new-password"></label>
                     <button type="submit">Beheer activeren</button>
                 </form>
+            </section>
+        </main>
+    <?php elseif (!$loggedIn && ($passwordReset['isValid'] ?? false)): ?>
+        <main class="admin-auth">
+            <section class="auth-panel">
+                <p class="eyebrow">Lodging at 8</p>
+                <h1>Nieuw wachtwoord instellen</h1>
+                <?php require __DIR__ . '/partials/messages.php'; ?>
+                <form method="post" action="<?= e(admin_script_url()) ?>">
+                    <input type="hidden" name="action" value="complete-password-reset">
+                    <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                    <input type="hidden" name="reset_token" value="<?= e($passwordReset['token']) ?>">
+                    <label>Nieuw wachtwoord <input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
+                    <label>Herhaal nieuw wachtwoord <input type="password" name="confirm_password" required minlength="10" autocomplete="new-password"></label>
+                    <button type="submit">Wachtwoord opslaan</button>
+                </form>
+                <p><a href="<?= e(admin_script_url()) ?>">Terug naar aanmelden</a></p>
             </section>
         </main>
     <?php elseif (!$loggedIn): ?>
@@ -51,10 +72,20 @@ $siteLogo = $adminState['siteLogo'];
                 <?php require __DIR__ . '/partials/messages.php'; ?>
                 <form method="post" action="<?= e(admin_script_url()) ?>">
                     <input type="hidden" name="action" value="login">
-                    <label>Login <input name="username" required autocomplete="username"></label>
+                    <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                    <label>E-mailadres <input type="email" name="username" required autocomplete="username"></label>
                     <label>Wachtwoord <input type="password" name="password" required autocomplete="current-password"></label>
                     <button type="submit">Aanmelden</button>
                 </form>
+                <details class="auth-reset">
+                    <summary>Paswoord vergeten?</summary>
+                    <form method="post" action="<?= e(admin_script_url()) ?>">
+                        <input type="hidden" name="action" value="request-password-reset">
+                        <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                        <label>E-mailadres <input type="email" name="reset_email" required autocomplete="email" value="<?= e($requestedResetEmail) ?>"></label>
+                        <button type="submit">Resetlink versturen</button>
+                    </form>
+                </details>
             </section>
         </main>
     <?php else: ?>

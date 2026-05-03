@@ -1,0 +1,144 @@
+{
+    "home": [
+        {
+            "file": "home/gevel2.jpg",
+            "title": "Gevel 2"
+        },
+        {
+            "file": "home/gevel-deur.jpg",
+            "title": "Voordeur"
+        },
+        {
+            "file": "home/breakfast-overv.jpg",
+            "title": "Breakfast"
+        },
+        {
+            "file": "home/gevel-detailnummer.jpg",
+            "title": "Gevel Nummer"
+        },
+        {
+            "file": "home/gevel-frontaal.jpg",
+            "title": "Gevel frontaal"
+        },
+        {
+            "file": "kamer-1/CRW_7055.jpg",
+            "title": "Room 1 – 6"
+        },
+        {
+            "file": "kamer-3/CRW_6952.jpg",
+            "title": "Terras 1"
+        },
+        {
+            "file": "kamer-3/CRW_7089.jpg",
+            "title": "Room 3 – 2"
+        },
+        {
+            "file": "home/breakfast1.jpg",
+            "title": "Ontbijt 1"
+        }
+    ],
+    "leuven": [
+        {
+            "file": "leuven/Leuven001.jpg",
+            "title": "Leuven 17"
+        },
+        {
+            "file": "leuven/Leuven018.jpg",
+            "title": "Leuven 16"
+        },
+        {
+            "file": "leuven/Leuven004.jpg",
+            "title": "Leuven 15"
+        },
+        {
+            "file": "leuven/Leuven002.jpg",
+            "title": "Leuven 14"
+        },
+        {
+            "file": "leuven/Leuven014.jpg",
+            "title": "Leuven 13"
+        },
+        {
+            "file": "leuven/Leuven010.jpg",
+            "title": "Leuven 12"
+        },
+        {
+            "file": "leuven/Leuven008.jpg",
+            "title": "Leuven 11"
+        },
+        {
+            "file": "leuven/Leuven006.jpg",
+            "title": "Leuven 10"
+        },
+        {
+            "file": "leuven/Leuven032.jpg",
+            "title": "Leuven 9"
+        },
+        {
+            "file": "leuven/Leuven024.jpg",
+            "title": "Leuven 8"
+        },
+        {
+            "file": "leuven/Leuven026.jpg",
+            "title": "Leuven 7"
+        },
+        {
+            "file": "leuven/Leuven028.jpg",
+            "title": "Leuven 6"
+        },
+        {
+            "file": "leuven/Leuven030.jpg",
+            "title": "Leuven 5"
+        },
+        {
+            "file": "leuven/Leuven020.jpg",
+            "title": "Leuven 4"
+        },
+        {
+            "file": "leuven/Leuven022.jpg",
+            "title": "Leuven 3"
+        }
+    ],
+    "kamer-1": [
+        {
+            "file": "kamer-1/bgstr-dakterras.jpg",
+            "title": "Dakterras"
+        },
+        {
+            "file": "kamer-1/CRW_7055.jpg",
+            "title": "Kamer 1"
+        },
+        {
+            "file": "kamer-1/bgstr-shower.jpg",
+            "title": ""
+        }
+    ],
+    "kamer-2": [
+        {
+            "file": "kamer-2/bgstr-room2.jpg",
+            "title": "Kamer 2"
+        },
+        {
+            "file": "kamer-2/bgstr-room2-2.jpg",
+            "title": "Kamer 2 detail"
+        },
+        {
+            "file": "kamer-2/bgstr-room2door.jpg",
+            "title": "bgstr-room2door"
+        }
+    ],
+    "kamer-3": [
+        {
+            "file": "kamer-3/CRW_7089.jpg",
+            "title": "Kamer 3"
+        },
+        {
+            "file": "kamer-3/bgstr-bathroom.jpg",
+            "title": "Badkamer"
+        },
+        {
+            "file": "kamer-3/CRW_6952.jpg",
+            "title": "Terras"
+        }
+    ]
+}

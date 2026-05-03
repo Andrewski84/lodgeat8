@@ -3,3 +3,6 @@
 
 # Runtime contact submissions are stored locally and should not be deployed from development.
 storage/contact-messages.json
+storage/contact-rate-limit.json
+storage/admin-login-attempts.json
+storage/admin.php

@@ -15,7 +15,44 @@ function storage_path(string $path = ''): string
 
 function content_json_path(): string
 {
+    // Legacy single-file location kept for backward-compatible reads.
     return storage_path('content.json');
+}
+
+function content_directory_path(): string
+{
+    return storage_path('content');
+}
+
+function content_part_key_is_valid(string $key): bool
+{
+    return preg_match('/^[a-z0-9][a-z0-9_-]*$/i', $key) === 1;
+}
+
+function content_part_path(string $key): string
+{
+    if (!content_part_key_is_valid($key)) {
+        throw new InvalidArgumentException('Ongeldige content sleutel: ' . $key);
+    }
+
+    return content_directory_path() . '/' . strtolower($key) . '.json';
+}
+
+function content_decode_json_file(string $path, &$decoded): bool
+{
+    if (!is_file($path)) {
+        return false;
+    }
+
+    $json = file_get_contents($path);
+
+    if (!is_string($json)) {
+        return false;
+    }
+
+    $decoded = json_decode($json, true);
+
+    return json_last_error() === JSON_ERROR_NONE;
 }
 
 function default_content(): array
@@ -46,21 +83,86 @@ function merge_content_defaults(array $content, array $defaults): array
     return $content;
 }
 
+function load_split_content(): ?array
+{
+    $directory = content_directory_path();
+
+    if (!is_dir($directory)) {
+        return null;
+    }
+
+    $files = glob($directory . '/*.json');
+
+    if ($files === false || $files === []) {
+        return null;
+    }
+
+    $content = [];
+
+    foreach ($files as $file) {
+        $key = strtolower((string) pathinfo($file, PATHINFO_FILENAME));
+
+        if (!content_part_key_is_valid($key)) {
+            continue;
+        }
+
+        $decoded = null;
+
+        if (!content_decode_json_file($file, $decoded)) {
+            return null;
+        }
+
+        $content[$key] = $decoded;
+    }
+
+    return $content === [] ? null : $content;
+}
+
+function load_legacy_content(): ?array
+{
+    $decoded = null;
+
+    if (!content_decode_json_file(content_json_path(), $decoded)) {
+        return null;
+    }
+
+    return is_array($decoded) ? $decoded : null;
+}
+
 function load_content(): array
 {
     $defaults = default_content();
-    $editablePath = content_json_path();
+    $splitContent = load_split_content();
 
-    if (is_file($editablePath)) {
-        $json = file_get_contents($editablePath);
-        $content = json_decode((string) $json, true);
+    if (is_array($splitContent)) {
+        return merge_content_defaults($splitContent, $defaults);
+    }
 
-        if (is_array($content)) {
-            return merge_content_defaults($content, $defaults);
-        }
+    $legacyContent = load_legacy_content();
+
+    if (is_array($legacyContent)) {
+        return merge_content_defaults($legacyContent, $defaults);
     }
 
     return $defaults;
+}
+
+function content_write_json_atomically(string $targetPath, string $json, string $errorContext): void
+{
+    $temporaryPath = $targetPath . '.tmp';
+
+    if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
+        throw new RuntimeException('De tijdelijke content kon niet worden opgeslagen voor ' . $errorContext . '.');
+    }
+
+    if (!@rename($temporaryPath, $targetPath)) {
+        if (!@copy($temporaryPath, $targetPath)) {
+            @unlink($temporaryPath);
+            throw new RuntimeException('De content kon niet worden weggeschreven voor ' . $errorContext . '.');
+        }
+
+        @unlink($temporaryPath);
+    }
 }
 
 function save_content(array $content): void
@@ -71,29 +173,50 @@ function save_content(array $content): void
         }
     }
 
-    $json = json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $contentDirectory = content_directory_path();
 
-    if ($json === false) {
-        throw new RuntimeException('De content kon niet naar JSON worden omgezet.');
+    if (!is_dir($contentDirectory)) {
+        if (!mkdir($contentDirectory, 0775, true) && !is_dir($contentDirectory)) {
+            throw new RuntimeException('De contentmap kon niet worden aangemaakt.');
+        }
     }
 
-    // Write to a temporary file first so interrupted saves do not corrupt the
-    // live JSON file that powers the public website.
-    $temporaryPath = content_json_path() . '.tmp';
+    $writtenKeys = [];
 
-    if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
-        throw new RuntimeException('De tijdelijke content kon niet worden opgeslagen.');
-    }
+    foreach ($content as $key => $value) {
+        $key = strtolower((string) $key);
 
-    $targetPath = content_json_path();
-
-    if (!@rename($temporaryPath, $targetPath)) {
-        if (!@copy($temporaryPath, $targetPath)) {
-            @unlink($temporaryPath);
-            throw new RuntimeException('De content kon niet naar storage/content.json worden geschreven.');
+        if (!content_part_key_is_valid($key)) {
+            throw new RuntimeException('De content bevat een ongeldige sleutel: ' . $key);
         }
 
-        @unlink($temporaryPath);
+        $json = json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        if ($json === false) {
+            throw new RuntimeException('De content kon niet naar JSON worden omgezet voor ' . $key . '.');
+        }
+
+        content_write_json_atomically(content_part_path($key), $json, $key);
+        $writtenKeys[$key] = true;
+    }
+
+    $existingFiles = glob($contentDirectory . '/*.json') ?: [];
+
+    foreach ($existingFiles as $file) {
+        $existingKey = strtolower((string) pathinfo($file, PATHINFO_FILENAME));
+
+        if (!content_part_key_is_valid($existingKey) || isset($writtenKeys[$existingKey])) {
+            continue;
+        }
+
+        @unlink($file);
+    }
+
+    // Cleanup old single-file content after a successful split write.
+    $legacyPath = content_json_path();
+
+    if (is_file($legacyPath)) {
+        @unlink($legacyPath);
     }
 }
 

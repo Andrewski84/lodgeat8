@@ -1,0 +1,14 @@
+{
+    "name": "Lodging at 8",
+    "reservation_url": "https://bookingengine.mylighthouse.com/6471",
+    "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL",
+    "email": "info@lodgingat8.be",
+    "phone": "+32 (0) 475 93 72 21",
+    "address": "Weldadigheidsstraat 8, 3000 Leuven",
+    "logo": "site/logo-footer.png",
+    "owner": "Steven Frooninckx",
+    "company": "B&B Lodging At 8 V.O.F.",
+    "business_number": "BE 0898 536 239",
+    "iban": "BE84-0682-4977-8259",
+    "favicon": "site/logo-footer-3.png"
+}
