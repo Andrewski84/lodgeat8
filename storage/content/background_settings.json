@@ -1,0 +1,16 @@
+{
+    "enabled_pages": [
+        "home",
+        "leuven",
+        "kamer-1",
+        "kamer-2",
+        "kamer-3",
+        "locatie",
+        "contact",
+        "links",
+        "voorwaarden"
+    ],
+    "desktop_size": "cover",
+    "mobile_size": "contain",
+    "position": "center center"
+}
