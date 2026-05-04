@@ -138,6 +138,7 @@
     "contact": {
         "title": "contact",
         "type": "contact",
+        "contact_form_enabled": false,
         "translations": {
             "nl": {
                 "title": "Contact",
@@ -146,16 +147,12 @@
             },
             "fr": {
                 "title": "Contact",
-                "intro": [
-                    "<br>"
-                ],
+                "intro": [],
                 "success_message": "Merci. Votre message a été envoyé."
             },
             "en": {
                 "title": "Contact",
-                "intro": [
-                    "<br>"
-                ],
+                "intro": [],
                 "success_message": "Thank you. Your message has been sent."
             }
         }

@@ -13,7 +13,7 @@ if ($route['status'] !== 200) {
     http_response_code($route['status']);
 }
 
-if (($page['type'] ?? '') === 'contact') {
+if (($page['type'] ?? '') === 'contact' && ($page['contact_form_enabled'] ?? true) !== false) {
     contact_prepare_runtime();
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {

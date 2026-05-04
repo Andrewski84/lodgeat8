@@ -33,6 +33,124 @@ function admin_extract_posted_section(string $defaultSection): string
     return array_key_exists($postedSection, admin_sections()) ? $postedSection : $defaultSection;
 }
 
+function admin_pull_flash_messages(): array
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return [];
+    }
+
+    $messages = $_SESSION['admin_flash_messages'] ?? [];
+    unset($_SESSION['admin_flash_messages']);
+
+    if (!is_array($messages)) {
+        return [];
+    }
+
+    $cleanMessages = [];
+
+    foreach ($messages as $message) {
+        if (!is_scalar($message)) {
+            continue;
+        }
+
+        $message = trim((string) $message);
+
+        if ($message !== '') {
+            $cleanMessages[] = $message;
+        }
+    }
+
+    return $cleanMessages;
+}
+
+function admin_queue_flash_messages(array $messages): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    $queuedMessages = $_SESSION['admin_flash_messages'] ?? [];
+    $queuedMessages = is_array($queuedMessages) ? $queuedMessages : [];
+
+    foreach ($messages as $message) {
+        if (!is_scalar($message)) {
+            continue;
+        }
+
+        $message = trim((string) $message);
+
+        if ($message !== '') {
+            $queuedMessages[] = $message;
+        }
+    }
+
+    $_SESSION['admin_flash_messages'] = $queuedMessages;
+}
+
+function admin_redirect_after_save_url(string $target): string
+{
+    $target = trim(html_entity_decode($target, ENT_QUOTES, 'UTF-8'));
+
+    if ($target === '') {
+        return '';
+    }
+
+    $parts = parse_url($target);
+
+    if (!is_array($parts)) {
+        return '';
+    }
+
+    $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+
+    if ($scheme !== '' && !in_array($scheme, ['http', 'https'], true)) {
+        return '';
+    }
+
+    if (isset($parts['host'])) {
+        $targetHost = strtolower(
+            (string) $parts['host'] . (isset($parts['port']) ? ':' . (string) $parts['port'] : '')
+        );
+        $currentHost = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+
+        if ($targetHost === '' || $currentHost === '' || $targetHost !== $currentHost) {
+            return '';
+        }
+    }
+
+    $query = [];
+
+    if (isset($parts['query']) && is_string($parts['query'])) {
+        parse_str($parts['query'], $query);
+    }
+
+    if (array_key_exists('logout', $query)) {
+        return admin_script_url() . '?logout=1';
+    }
+
+    $rawSection = $query['section'] ?? '';
+    $section = is_scalar($rawSection)
+        ? preg_replace('/[^a-z0-9-]/', '', strtolower((string) $rawSection))
+        : '';
+
+    if (!array_key_exists($section, admin_sections())) {
+        return '';
+    }
+
+    return admin_section_url($section);
+}
+
+function admin_action_allows_redirect_after_save(string $action): bool
+{
+    return in_array($action, [
+        'save-credentials',
+        'save-general',
+        'save-page',
+        'save-room',
+        'save-links',
+    ], true);
+}
+
 function admin_wait_message(int $seconds): string
 {
     $seconds = max(1, $seconds);
@@ -44,7 +162,7 @@ function admin_controller_state(array $config): array
 {
     admin_prepare_runtime();
 
-    $messages = [];
+    $messages = admin_pull_flash_messages();
     $errors = [];
     $section = admin_extract_posted_section(admin_requested_section());
     $isAjaxRequest = admin_is_ajax_request();
@@ -60,6 +178,7 @@ function admin_controller_state(array $config): array
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = (string) ($_POST['action'] ?? '');
+        $messageCountBeforePost = count($messages);
 
         try {
             if ($action === '' && $_POST === []) {
@@ -192,6 +311,16 @@ function admin_controller_state(array $config): array
             }
         } catch (Throwable $exception) {
             $errors[] = $exception->getMessage();
+        }
+
+        if ($errors === [] && !$isAjaxRequest && admin_action_allows_redirect_after_save($action)) {
+            $redirectAfterSave = admin_redirect_after_save_url((string) ($_POST['redirect_after_save'] ?? ''));
+
+            if ($redirectAfterSave !== '') {
+                admin_queue_flash_messages(array_slice($messages, $messageCountBeforePost));
+                header('Location: ' . $redirectAfterSave);
+                exit;
+            }
         }
     }
 

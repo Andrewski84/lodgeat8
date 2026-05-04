@@ -2,13 +2,15 @@ const photoRequests = new WeakMap();
 const photoSaveTimers = new WeakMap();
 const photoHideTimers = new WeakMap();
 const activePhotoManagers = new Set();
-const saveFeedbackVisibleMs = 2000;
+const saveFeedbackVisibleMs = 3000;
 const photoUploadTimeoutMs = 180000;
 
 // Shared dirty-state handling. Any editable admin form can reveal its save bar
-// and trigger the unsaved-changes modal before internal navigation.
+// and trigger the unsaved-changes modal before admin navigation, refresh keys
+// or browser back/forward navigation.
 let hasUnsavedChanges = false;
 let pendingNavigationUrl = '';
+let pendingNavigationHandler = null;
 let isSubmittingForm = false;
 const dirtyForms = new Set();
 let lastDirtyForm = null;
@@ -51,6 +53,7 @@ const clearUnsavedChanges = (source = null) => {
         hasUnsavedChanges = dirtyForms.size > 0;
         lastDirtyForm = lastDirtyForm === form ? Array.from(dirtyForms).pop() || null : lastDirtyForm;
         pendingNavigationUrl = '';
+        pendingNavigationHandler = null;
 
         return;
     }
@@ -60,19 +63,37 @@ const clearUnsavedChanges = (source = null) => {
     lastDirtyForm = null;
     hasUnsavedChanges = false;
     pendingNavigationUrl = '';
+    pendingNavigationHandler = null;
 };
 
-const showUnsavedModal = (url) => {
+const showUnsavedModal = (url, handler = null) => {
     if (!unsavedModal) {
         return false;
     }
 
     pendingNavigationUrl = url;
+    pendingNavigationHandler = typeof handler === 'function' ? handler : null;
     unsavedModal.hidden = false;
     document.body.classList.add('has-unsaved-modal');
     unsavedSaveButton?.focus();
 
     return true;
+};
+
+const setRedirectAfterSave = (form, url) => {
+    form.querySelectorAll('input[name="redirect_after_save"]').forEach((input) => input.remove());
+
+    if (url === '') {
+        return null;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'redirect_after_save';
+    input.value = url;
+    form.append(input);
+
+    return input;
 };
 
 const hideUnsavedModal = () => {
@@ -94,24 +115,30 @@ const isTrackableControl = (target) => {
     return !['button', 'submit', 'reset', 'hidden'].includes(type);
 };
 
-const isInternalAdminUrl = (href) => {
+const navigationUrlFromLink = (link) => {
+    if (!link || (link.target && link.target !== '_self') || link.hasAttribute('download')) {
+        return null;
+    }
+
+    const rawHref = link.getAttribute('href') || '';
+
+    if (rawHref === '' || rawHref.startsWith('#')) {
+        return null;
+    }
+
     let url;
 
     try {
-        url = new URL(href, window.location.href);
+        url = new URL(link.href, window.location.href);
     } catch (_error) {
-        return false;
+        return null;
     }
 
-    if (url.origin !== window.location.origin) {
-        return false;
+    if (!['http:', 'https:'].includes(url.protocol)) {
+        return null;
     }
 
-    const currentPath = window.location.pathname.replace(/\\/g, '/');
-    const targetPath = url.pathname.replace(/\\/g, '/');
-
-    return currentPath.includes('/beheer/')
-        && (targetPath.includes('/beheer/') || targetPath === currentPath);
+    return url.href;
 };
 
 const formHasActivePhotoSave = (form) => Array.from(activePhotoManagers)
@@ -326,31 +353,26 @@ document.querySelectorAll('.admin-layout form').forEach((form) => {
 
 document.addEventListener('click', (event) => {
     const link = event.target.closest('a[href]');
+    const navigationUrl = navigationUrlFromLink(link);
 
-    if (!link || !hasUnsavedChanges || isSubmittingForm || event.defaultPrevented) {
-        return;
-    }
-
-    if (link.target && link.target !== '_self') {
-        return;
-    }
-
-    if (!isInternalAdminUrl(link.href)) {
+    if (!navigationUrl || !hasUnsavedChanges || isSubmittingForm || event.defaultPrevented) {
         return;
     }
 
     event.preventDefault();
 
-    if (!showUnsavedModal(link.href)) {
+    if (!showUnsavedModal(navigationUrl)) {
         clearUnsavedChanges();
-        window.location.href = link.href;
+        window.location.href = navigationUrl;
     }
 });
 
 unsavedSaveButton?.addEventListener('click', () => {
     const formToSave = lastDirtyForm || Array.from(dirtyForms).pop() || null;
+    const targetUrl = pendingNavigationUrl;
 
     pendingNavigationUrl = '';
+    pendingNavigationHandler = null;
     hideUnsavedModal();
 
     if (!formToSave) {
@@ -358,8 +380,11 @@ unsavedSaveButton?.addEventListener('click', () => {
         return;
     }
 
+    const redirectInput = setRedirectAfterSave(formToSave, targetUrl);
+
     if (typeof formToSave.requestSubmit === 'function') {
         formToSave.requestSubmit();
+        window.setTimeout(() => redirectInput?.remove(), 0);
         return;
     }
 
@@ -370,6 +395,7 @@ unsavedSaveButton?.addEventListener('click', () => {
 
 unsavedStayButton?.addEventListener('click', () => {
     pendingNavigationUrl = '';
+    pendingNavigationHandler = null;
     hideUnsavedModal();
 });
 
@@ -379,15 +405,20 @@ unsavedModal?.addEventListener('click', (event) => {
     }
 
     pendingNavigationUrl = '';
+    pendingNavigationHandler = null;
     hideUnsavedModal();
 });
 
 unsavedLeaveButton?.addEventListener('click', () => {
     const targetUrl = pendingNavigationUrl;
+    const targetHandler = pendingNavigationHandler;
+
     clearUnsavedChanges();
     hideUnsavedModal();
 
-    if (targetUrl !== '') {
+    if (targetHandler) {
+        targetHandler();
+    } else if (targetUrl !== '') {
         window.location.href = targetUrl;
     }
 });
@@ -395,24 +426,113 @@ unsavedLeaveButton?.addEventListener('click', () => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && unsavedModal && !unsavedModal.hidden) {
         pendingNavigationUrl = '';
+        pendingNavigationHandler = null;
         hideUnsavedModal();
+        return;
     }
-});
 
-window.addEventListener('beforeunload', (event) => {
-    if (!hasUnsavedChanges || isSubmittingForm) {
+    const key = event.key.toLowerCase();
+    const isRefreshShortcut = event.key === 'F5' || ((event.ctrlKey || event.metaKey) && key === 'r');
+
+    if (!isRefreshShortcut || !hasUnsavedChanges || isSubmittingForm || event.defaultPrevented) {
         return;
     }
 
     event.preventDefault();
-    event.returnValue = '';
+
+    if (!showUnsavedModal('', () => window.location.reload())) {
+        clearUnsavedChanges();
+        window.location.reload();
+    }
 });
 
+if (window.history && typeof window.history.pushState === 'function') {
+    const guardedHistoryState = Object.assign({}, window.history.state || {}, { adminUnsavedGuard: true });
+
+    try {
+        window.history.replaceState(guardedHistoryState, '', window.location.href);
+        window.history.pushState(guardedHistoryState, '', window.location.href);
+    } catch (_error) {
+        // History state can be unavailable in unusual browser/privacy modes.
+    }
+
+    window.addEventListener('popstate', () => {
+        if (isSubmittingForm) {
+            return;
+        }
+
+        if (!hasUnsavedChanges) {
+            window.history.back();
+            return;
+        }
+
+        try {
+            window.history.pushState(guardedHistoryState, '', window.location.href);
+        } catch (_error) {
+            // If re-adding the guard fails, keep the user on the page and still
+            // show the custom modal for the action they attempted.
+        }
+
+        if (!showUnsavedModal('', () => window.history.back())) {
+            clearUnsavedChanges();
+            window.history.back();
+        }
+    });
+}
+
 // Toasts are used for regular form saves; photo uploads use the same duration
-// but keep their own progress state.
-document.querySelectorAll('[data-admin-toast]').forEach((toast) => {
+// but keep their own progress state. The visible toast height is exposed to CSS
+// so the unsaved save bar can share the same bottom-right lane without overlap.
+const adminToasts = Array.from(document.querySelectorAll('[data-admin-toast]'));
+const syncAdminToastOffset = () => {
+    const visibleToasts = adminToasts.filter((toast) => !toast.hidden);
+    const maxToastHeight = visibleToasts.reduce((height, toast) => (
+        Math.max(height, toast.getBoundingClientRect().height)
+    ), 0);
+    const offset = maxToastHeight > 0 ? maxToastHeight + 12 : 0;
+
+    document.documentElement.style.setProperty('--admin-toast-offset', `${offset}px`);
+};
+
+adminToasts.forEach((toast) => {
+    let hideTimer = 0;
+    let isHovering = false;
+    const openedAt = Date.now();
+
+    const clearHideTimer = () => {
+        if (hideTimer === 0) {
+            return;
+        }
+
+        window.clearTimeout(hideTimer);
+        hideTimer = 0;
+    };
+
     const hideToast = () => {
+        clearHideTimer();
         toast.hidden = true;
+        syncAdminToastOffset();
+    };
+
+    const scheduleHideToast = () => {
+        if (!toast.hasAttribute('data-admin-toast-autohide') || toast.hidden) {
+            return;
+        }
+
+        clearHideTimer();
+
+        const elapsed = Date.now() - openedAt;
+        const delay = Math.max(0, saveFeedbackVisibleMs - elapsed);
+
+        hideTimer = window.setTimeout(() => {
+            hideTimer = 0;
+
+            if (isHovering) {
+                return;
+            }
+
+            hideToast();
+        }, delay);
     };
 
     toast.querySelectorAll('[data-admin-toast-close]').forEach((button) => {
@@ -420,9 +540,22 @@ document.querySelectorAll('[data-admin-toast]').forEach((toast) => {
     });
 
     if (toast.hasAttribute('data-admin-toast-autohide')) {
-        window.setTimeout(hideToast, saveFeedbackVisibleMs);
+        toast.addEventListener('mouseenter', () => {
+            isHovering = true;
+            clearHideTimer();
+        });
+
+        toast.addEventListener('mouseleave', () => {
+            isHovering = false;
+            scheduleHideToast();
+        });
+
+        scheduleHideToast();
     }
 });
+
+syncAdminToastOffset();
+window.addEventListener('resize', syncAdminToastOffset);
 
 // Rich-text editor with a strict HTML subset and explicit toolbar commands.
 const escapeHtml = (value) => value

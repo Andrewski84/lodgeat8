@@ -7,6 +7,7 @@ $contactBusinessNumber = trim((string) ($config['site']['business_number'] ?? ''
 $contactIban = trim((string) ($config['site']['iban'] ?? ''));
 $contactPhone = trim((string) ($config['site']['phone'] ?? ''));
 $contactEmail = trim((string) ($config['site']['email'] ?? ''));
+$contactFormEnabled = ($page['contact_form_enabled'] ?? true) !== false;
 
 if ($contactOwner !== '') {
     $contactDetails[] = ['', $contactOwner];
@@ -45,24 +46,26 @@ if ($contactIban !== '') {
 <?php if (isset($page['intro']) && is_array($page['intro'])): ?>
     <?php render_intro($page['intro']); ?>
 <?php endif; ?>
-<?php if ($contactResult['success']): ?>
-    <p class="notice"><?= rich_text_html((string) ($page['success_message'] ?? 'Bedankt, je bericht werd verzonden.')) ?></p>
+<?php if ($contactFormEnabled): ?>
+    <?php if ($contactResult['success']): ?>
+        <p class="notice"><?= rich_text_html((string) ($page['success_message'] ?? 'Bedankt, je bericht werd verzonden.')) ?></p>
+    <?php endif; ?>
+    <?php if ($contactResult['errors'] !== []): ?>
+        <div class="notice is-error">
+            <?php foreach ($contactResult['errors'] as $error): ?>
+                <p><?= e($error) ?></p>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+    <form class="contact-form" method="post" action="<?= e(url_for('contact')) ?>">
+        <input type="hidden" name="csrf_token" value="<?= e((string) ($contactResult['csrf_token'] ?? '')) ?>">
+        <input type="hidden" name="form_started_at" value="<?= e((string) ($contactResult['form_started_at'] ?? 0)) ?>">
+        <label class="form-trap">Website <input name="website" tabindex="-1" autocomplete="off"></label>
+        <label><?= e(ui_text('form_name')) ?> <input required name="name" autocomplete="name" value="<?= e($contactResult['values']['name']) ?>"></label>
+        <label><?= e(ui_text('form_email')) ?> <input required type="email" name="email" autocomplete="email" value="<?= e($contactResult['values']['email']) ?>"></label>
+        <label><?= e(ui_text('form_phone')) ?> <input required name="phone" autocomplete="tel" value="<?= e($contactResult['values']['phone']) ?>"></label>
+        <label><?= e(ui_text('form_subject')) ?> <input name="subject" value="<?= e($contactResult['values']['subject']) ?>"></label>
+        <label class="wide"><?= e(ui_text('form_message')) ?> <textarea required name="message" rows="6"><?= e($contactResult['values']['message']) ?></textarea></label>
+        <button type="submit"><?= e(ui_text('form_send')) ?></button>
+    </form>
 <?php endif; ?>
-<?php if ($contactResult['errors'] !== []): ?>
-    <div class="notice is-error">
-        <?php foreach ($contactResult['errors'] as $error): ?>
-            <p><?= e($error) ?></p>
-        <?php endforeach; ?>
-    </div>
-<?php endif; ?>
-<form class="contact-form" method="post" action="<?= e(url_for('contact')) ?>">
-    <input type="hidden" name="csrf_token" value="<?= e((string) ($contactResult['csrf_token'] ?? '')) ?>">
-    <input type="hidden" name="form_started_at" value="<?= e((string) ($contactResult['form_started_at'] ?? 0)) ?>">
-    <label class="form-trap">Website <input name="website" tabindex="-1" autocomplete="off"></label>
-    <label><?= e(ui_text('form_name')) ?> <input required name="name" autocomplete="name" value="<?= e($contactResult['values']['name']) ?>"></label>
-    <label><?= e(ui_text('form_email')) ?> <input required type="email" name="email" autocomplete="email" value="<?= e($contactResult['values']['email']) ?>"></label>
-    <label><?= e(ui_text('form_phone')) ?> <input required name="phone" autocomplete="tel" value="<?= e($contactResult['values']['phone']) ?>"></label>
-    <label><?= e(ui_text('form_subject')) ?> <input name="subject" value="<?= e($contactResult['values']['subject']) ?>"></label>
-    <label class="wide"><?= e(ui_text('form_message')) ?> <textarea required name="message" rows="6"><?= e($contactResult['values']['message']) ?></textarea></label>
-    <button type="submit"><?= e(ui_text('form_send')) ?></button>
-</form>

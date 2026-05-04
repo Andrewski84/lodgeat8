@@ -112,6 +112,10 @@ function admin_save_page_content(array $content, string $pageKey, array $post, a
         return $content;
     }
 
+    if ($pageKey === 'contact' && array_key_exists('contact_form_enabled', $post)) {
+        $content['pages'][$pageKey]['contact_form_enabled'] = (string) $post['contact_form_enabled'] === '1';
+    }
+
     foreach (supported_languages() as $language => $label) {
         $languagePost = $post['translations'][$language] ?? [];
         admin_set_translation($content['pages'][$pageKey], $language, 'title', trim((string) ($languagePost['title'] ?? '')));

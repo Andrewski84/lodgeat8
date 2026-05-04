@@ -30,6 +30,11 @@
     <form class="admin-form" method="post" action="<?= e(admin_section_url($section)) ?>">
         <?php beheer_hidden_fields($csrfToken, $section, 'save-page'); ?>
         <input type="hidden" name="page_key" value="contact">
+        <label class="checkbox-field">
+            <input type="hidden" name="contact_form_enabled" value="0">
+            <input type="checkbox" name="contact_form_enabled" value="1"<?= ($page['contact_form_enabled'] ?? true) ? ' checked' : '' ?>>
+            Contactformulier tonen
+        </label>
         <div class="language-grid">
             <?php beheer_page_fields($page, true, true); ?>
         </div>

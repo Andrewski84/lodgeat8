@@ -365,6 +365,7 @@ HTML,
         'contact' => [
             'title' => 'contact',
             'type' => 'contact',
+            'contact_form_enabled' => true,
         ],
         'links' => [
             'title' => 'links',

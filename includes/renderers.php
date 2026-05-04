@@ -223,15 +223,13 @@ function map_embed_url(string $mapUrl): string
 
 function page_template_for(string $type): string
 {
+    // Only pages with distinct markup get a dedicated template. Text-only pages
+    // such as home, Leuven and terms intentionally fall back to generic.php.
     $templates = [
-        'home' => 'home',
-        'leuven' => 'leuven',
         'room' => 'room',
         'location' => 'location',
         'contact' => 'contact',
         'links' => 'links',
-        'news' => 'news',
-        'terms' => 'terms',
     ];
 
     return $templates[$type] ?? 'generic';
