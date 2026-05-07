@@ -27,32 +27,35 @@ function is_list_array(array $array): bool
 
 function supported_languages(): array
 {
-    return [
-        'nl' => 'Nederlands',
-        'fr' => 'Français',
-        'en' => 'English',
-    ];
+    return get_supported_languages();
 }
 
 function requested_language(): string
 {
-    $language = strtolower((string) ($_GET['lang'] ?? 'nl'));
-
-    return array_key_exists($language, supported_languages()) ? $language : 'nl';
+    return get_requested_language();
 }
 
 function current_language(): string
 {
-    return (string) ($GLOBALS['currentLanguage'] ?? requested_language());
+    return get_current_language();
 }
 
 function url_for(string $page, ?string $language = null): string
 {
-    if ($language === null) {
-        $language = current_language();
+    return create_language_url($page, $language);
+}
+
+function is_safe_web_url(string $url): bool
+{
+    $url = trim($url);
+
+    if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false) {
+        return false;
     }
 
-    return 'index.php?lang=' . rawurlencode($language) . '&p=' . rawurlencode($page);
+    $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+
+    return in_array($scheme, ['http', 'https'], true);
 }
 
 function asset(string $path): string

@@ -3,6 +3,8 @@
         <button class="nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-label="Menu">
             <span class="nav-toggle-icon" aria-hidden="true"></span>
         </button>
+        <?php $languagePickerClass = 'language-picker-mobile'; ?>
+        <?php require __DIR__ . '/language-picker.php'; ?>
         <?php require __DIR__ . '/booking-widget.php'; ?>
     </div>
     <nav class="primary-nav" data-nav>
@@ -13,5 +15,11 @@
             <a class="mobile-nav-link" href="<?= e(url_for('voorwaarden')) ?>"<?= is_active($pageKey, 'voorwaarden') ?>><?= e(navigation_label($config, 'voorwaarden', $currentLanguage)) ?></a>
         </div>
     </nav>
-    <a class="brand" href="<?= e(url_for('home')) ?>"><?= e($config['site']['name']) ?></a>
+    <?php $headerLogo = trim((string) ($config['site']['logo'] ?? '')); ?>
+    <a class="brand" href="<?= e(url_for('home')) ?>" aria-label="<?= e($config['site']['name']) ?>">
+        <?php if ($headerLogo !== ''): ?>
+            <img class="brand-logo" src="<?= e(image_path($headerLogo)) ?>" alt="">
+        <?php endif; ?>
+        <span class="brand-text"><?= e($config['site']['name']) ?></span>
+    </a>
 </header>

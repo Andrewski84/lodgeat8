@@ -6,6 +6,7 @@ $pricesHeading = trim((string) ($room['prices_heading'] ?? ui_text('price_per_ni
 $prices = isset($room['prices']) && is_array($room['prices']) ? array_filter($room['prices']) : [];
 $showPricesSection = $pricesHeading !== '' || $prices !== [];
 $bookingUrl = trim((string) ($room['booking_url'] ?? $config['site']['reservation_url'] ?? $config['site']['booking_url'] ?? ''));
+$bookingUrl = is_safe_web_url($bookingUrl) ? $bookingUrl : '';
 ?>
 <div class="room-layout">
     <div>

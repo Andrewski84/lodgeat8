@@ -7,13 +7,32 @@ function admin_append_deletion_message(array &$messages, array $deletionResult):
     $failedImages = $deletionResult['failed'] ?? [];
 
     if ($deletedImages !== []) {
-        $messages[] = 'Verwijderd uit assets: ' . implode(', ', $deletedImages);
+        $messages[] = count($deletedImages) === 1
+            ? 'Foto definitief verwijderd.'
+            : count($deletedImages) . ' foto\'s definitief verwijderd.';
     }
 
     if ($failedImages !== []) {
-        $messages[] = 'De pagina is bewaard, maar deze bestanden konden niet fysiek uit assets/img worden verwijderd: '
-            . implode(', ', $failedImages)
-            . '. Controleer de bestandsrechten op de server.';
+        $messages[] = count($failedImages) === 1
+            ? 'De foto kon niet volledig verwijderd worden. Probeer opnieuw of contacteer je webbeheerder.'
+            : 'Enkele foto\'s konden niet volledig verwijderd worden. Probeer opnieuw of contacteer je webbeheerder.';
+    }
+}
+
+function admin_save_content_with_media_deletions(array &$config, array &$messages, string $successMessage): void
+{
+    $mediaDeletions = admin_take_media_deletions();
+    $mediaReferenceRemovals = admin_take_media_reference_removals();
+
+    if ($mediaReferenceRemovals !== []) {
+        admin_remove_media_references($config, $mediaReferenceRemovals);
+    }
+
+    save_content($config);
+    $messages[] = $successMessage;
+
+    if ($mediaDeletions !== []) {
+        admin_append_deletion_message($messages, admin_delete_unreferenced_media($mediaDeletions, $config));
     }
 }
 
@@ -145,6 +164,7 @@ function admin_action_allows_redirect_after_save(string $action): bool
     return in_array($action, [
         'save-credentials',
         'save-general',
+        'save-mail-settings',
         'save-page',
         'save-room',
         'save-links',
@@ -289,19 +309,16 @@ function admin_controller_state(array $config): array
                 $messages[] = 'Nieuwe resetlink aangemaakt. Deze link verloopt na ' . admin_password_reset_expires_minutes() . ' minuten.';
             } elseif ($action === 'save-general') {
                 $config = admin_save_general($config, $_POST, $_FILES);
-                save_content($config);
-                $messages[] = 'Algemene instellingen zijn bewaard.';
-                admin_append_deletion_message($messages, admin_flush_media_deletions($config));
+                admin_save_content_with_media_deletions($config, $messages, 'Algemene instellingen zijn bewaard.');
+            } elseif ($action === 'save-mail-settings') {
+                app_save_mail_settings_from_post($_POST);
+                $messages[] = 'Technische mailinstellingen zijn bewaard.';
             } elseif ($action === 'save-page') {
                 $config = admin_save_page_content($config, (string) ($_POST['page_key'] ?? ''), $_POST, $_FILES);
-                save_content($config);
-                $messages[] = 'Pagina is bewaard.';
-                admin_append_deletion_message($messages, admin_flush_media_deletions($config));
+                admin_save_content_with_media_deletions($config, $messages, 'Pagina is bewaard.');
             } elseif ($action === 'save-room') {
                 $config = admin_save_room_content($config, (string) ($_POST['room_key'] ?? ''), $_POST, $_FILES);
-                save_content($config);
-                $messages[] = 'Kamer is bewaard.';
-                admin_append_deletion_message($messages, admin_flush_media_deletions($config));
+                admin_save_content_with_media_deletions($config, $messages, 'Kamer is bewaard.');
             } elseif ($action === 'save-links') {
                 $config = admin_save_links_content($config, $_POST);
                 save_content($config);
@@ -355,6 +372,8 @@ function admin_controller_state(array $config): array
         'adminUsername' => admin_username(),
         'requestedResetEmail' => $requestedResetEmail,
         'bookingWidget' => booking_widget_settings($config),
+        'mailSettings' => app_mail_settings(),
+        'mailPasswordSet' => app_mail_password_is_set(),
         'siteLogo' => admin_safe_media_filename((string) ($config['site']['logo'] ?? '')),
         'siteFavicon' => admin_safe_media_filename((string) ($config['site']['favicon'] ?? '')),
         'passwordReset' => [

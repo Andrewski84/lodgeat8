@@ -208,7 +208,7 @@ function beheer_room_fields(array $room): void
         <div class="admin-edit-section">
             <label>
                 Booking link voor "Beschikbaarheid & reservatie"
-                <input name="translations[<?= e($language) ?>][booking_url]" value="<?= e(admin_translated_text($room, 'booking_url', $language)) ?>" placeholder="https://">
+                <input type="url" name="translations[<?= e($language) ?>][booking_url]" value="<?= e(admin_translated_text($room, 'booking_url', $language)) ?>" placeholder="https://">
             </label>
             <?php beheer_list_editor('translations[' . $language . '][features]', admin_translated_lines($room, 'features', $language), 'Voorzieningen', 'Nieuwe voorziening'); ?>
         </div>
@@ -259,7 +259,7 @@ function beheer_links_fields(array $page): void
                         <?php foreach ($rows as $row): ?>
                             <div class="link-row" data-link-row>
                                 <input name="translations[<?= e($language) ?>][sections][<?= e((string) $index) ?>][links][label][]" value="<?= e($row['label']) ?>" placeholder="Leuven">
-                                <input name="translations[<?= e($language) ?>][sections][<?= e((string) $index) ?>][links][url][]" value="<?= e($row['url']) ?>" placeholder="https://">
+                                <input type="url" name="translations[<?= e($language) ?>][sections][<?= e((string) $index) ?>][links][url][]" value="<?= e($row['url']) ?>" placeholder="https://">
                                 <button type="button" class="icon-button is-danger" data-link-row-remove aria-label="Rij verwijderen">&times;</button>
                             </div>
                         <?php endforeach; ?>
@@ -268,7 +268,7 @@ function beheer_links_fields(array $page): void
                 <template data-link-row-template>
                     <div class="link-row" data-link-row>
                         <input name="translations[<?= e($language) ?>][sections][<?= e((string) $index) ?>][links][label][]" value="" placeholder="Leuven">
-                        <input name="translations[<?= e($language) ?>][sections][<?= e((string) $index) ?>][links][url][]" value="" placeholder="https://">
+                        <input type="url" name="translations[<?= e($language) ?>][sections][<?= e((string) $index) ?>][links][url][]" value="" placeholder="https://">
                         <button type="button" class="icon-button is-danger" data-link-row-remove aria-label="Rij verwijderen">&times;</button>
                     </div>
                 </template>

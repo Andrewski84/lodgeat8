@@ -4,7 +4,15 @@
             <h2><?= e($heading) ?></h2>
             <ul>
                 <?php foreach ($links as $link): ?>
-                    <li><a href="<?= e($link[1]) ?>" target="_blank" rel="noopener"><?= e($link[0]) ?></a></li>
+                    <?php
+                    $linkLabel = trim((string) ($link[0] ?? ''));
+                    $linkUrl = trim((string) ($link[1] ?? ''));
+
+                    if ($linkLabel === '' || !is_safe_web_url($linkUrl)) {
+                        continue;
+                    }
+                    ?>
+                    <li><a href="<?= e($linkUrl) ?>" target="_blank" rel="noopener"><?= e($linkLabel) ?></a></li>
                 <?php endforeach; ?>
             </ul>
         </section>

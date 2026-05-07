@@ -162,13 +162,18 @@ function booking_widget_settings(array $config): array
 {
     $widget = $config['booking_widget'] ?? [];
     $site = $config['site'] ?? [];
+    $fallbackAction = trim((string) ($site['reservation_url'] ?? ''));
+
+    if ($fallbackAction === '') {
+        $fallbackAction = trim((string) ($site['booking_url'] ?? ''));
+    }
 
     return [
         'enabled' => ($widget['enabled'] ?? true) === true,
         'title' => trim((string) ($widget['title'] ?? 'Reservatie')),
         'button_label' => trim((string) ($widget['button_label'] ?? 'Check availability')),
         'embed_code' => (string) ($widget['embed_code'] ?? ''),
-        'fallback_action' => (string) ($site['reservation_url'] ?? ''),
+        'fallback_action' => $fallbackAction,
     ];
 }
 
@@ -177,10 +182,16 @@ function booking_widget_action(array $widget): string
     // Existing Cubilis snippets contain the booking URL in an embedded form.
     // Extract it so the site can render a modern native date form.
     if (preg_match('/<form\b[^>]*\baction=["\']([^"\']+)["\']/i', $widget['embed_code'], $matches) === 1) {
-        return html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8');
+        $action = html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8');
+
+        if (is_safe_web_url($action)) {
+            return $action;
+        }
     }
 
-    return $widget['fallback_action'];
+    $fallbackAction = (string) ($widget['fallback_action'] ?? '');
+
+    return is_safe_web_url($fallbackAction) ? $fallbackAction : '';
 }
 
 function booking_widget_language(array $widget): string
@@ -206,7 +217,7 @@ function map_embed_url(string $mapUrl): string
         $mapUrl = html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8');
     }
 
-    if (filter_var($mapUrl, FILTER_VALIDATE_URL) === false) {
+    if (!is_safe_web_url($mapUrl)) {
         return '';
     }
 

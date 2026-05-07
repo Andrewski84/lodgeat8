@@ -25,14 +25,15 @@ function admin_save_credentials(string $username, string $password): void
         'username' => $username,
         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
         'password_updated_at' => date('c'),
-        'password_reset_tokens' => [],
     ]);
+    admin_write_password_reset_tokens([]);
 }
 
 function admin_update_credentials(string $username, ?string $password = null): void
 {
     $settings = admin_settings();
     $username = admin_normalized_username($username);
+    unset($settings['password_reset_tokens']);
 
     if ($username === '') {
         throw new RuntimeException('Gebruik een geldig e-mailadres als login.');
@@ -40,13 +41,18 @@ function admin_update_credentials(string $username, ?string $password = null): v
 
     $settings['username'] = $username;
 
-    if ($password !== null && $password !== '') {
+    $passwordChanged = $password !== null && $password !== '';
+
+    if ($passwordChanged) {
         $settings['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
         $settings['password_updated_at'] = date('c');
-        $settings['password_reset_tokens'] = [];
     }
 
     admin_write_settings($settings);
+
+    if ($passwordChanged) {
+        admin_write_password_reset_tokens([]);
+    }
 }
 
 function admin_client_ip(): string
@@ -211,6 +217,7 @@ function admin_login(string $username, string $password): bool
     if (password_needs_rehash($hash, PASSWORD_DEFAULT)) {
         $settings['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
         $settings['password_updated_at'] = date('c');
+        unset($settings['password_reset_tokens']);
         admin_write_settings($settings);
     }
 
@@ -240,9 +247,8 @@ function admin_clean_mail_header(string $value): string
 /**
  * Send a password-reset link to the configured admin address.
  *
- * The reset flow deliberately keeps token generation and mail delivery in PHP
- * rather than relying on admin-only UI. That way a fresh production deployment
- * can recover access as soon as PHP mail() is configured by the host.
+ * Mail delivery goes through the shared mail helper, so the same PHPMailer
+ * SMTP settings can be used for contact and password reset messages.
  */
 function admin_send_password_reset_email(array $config, string $email, string $resetLink): bool
 {
@@ -269,14 +275,7 @@ function admin_send_password_reset_email(array $config, string $email, string $r
         'De link verloopt na ' . admin_password_reset_expires_minutes() . ' minuten.',
         'Heb je dit niet aangevraagd? Dan mag je dit bericht negeren.',
     ]);
-    $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'From: ' . $siteName . ' <' . $from . '>',
-        'Reply-To: ' . $from,
-    ];
-
-    return @mail($to, $subject, $body, implode("\r\n", $headers));
+    return app_send_email($config, $to, $subject, $body, $from !== false ? $from : '');
 }
 
 /**
@@ -297,7 +296,37 @@ function admin_request_password_reset_email(array $config, string $email): bool
     return admin_send_password_reset_email($config, $email, admin_generate_password_reset_link());
 }
 
-function admin_normalized_password_reset_tokens(array $tokens): array
+function admin_password_reset_tokens_path(): string
+{
+    return storage_path('reset_tokens.json');
+}
+
+function admin_read_password_reset_tokens(): array
+{
+    $path = admin_password_reset_tokens_path();
+
+    if (is_file($path)) {
+        $json = file_get_contents($path);
+        $decoded = json_decode((string) $json, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    $legacyTokens = admin_settings()['password_reset_tokens'] ?? [];
+
+    return is_array($legacyTokens) ? $legacyTokens : [];
+}
+
+function admin_write_password_reset_tokens(array $tokens): void
+{
+    app_write_json_runtime_file(
+        admin_password_reset_tokens_path(),
+        admin_normalized_password_reset_tokens($tokens, false),
+        'De reset-tokens konden niet worden opgeslagen.'
+    );
+}
+
+function admin_normalized_password_reset_tokens(array $tokens, bool $onlyUsable = true): array
 {
     $valid = [];
     $now = time();
@@ -308,16 +337,18 @@ function admin_normalized_password_reset_tokens(array $tokens): array
         }
 
         $hash = (string) ($token['hash'] ?? '');
-        $expiresAt = (int) ($token['expires_at'] ?? 0);
+        $expiresAt = (int) ($token['expires'] ?? ($token['expires_at'] ?? 0));
+        $used = (bool) ($token['used'] ?? false);
 
-        if ($hash === '' || strlen($hash) !== 64 || $expiresAt <= $now) {
+        if ($hash === '' || strlen($hash) !== 64 || $expiresAt <= $now || ($onlyUsable && $used)) {
             continue;
         }
 
         $valid[] = [
             'hash' => $hash,
-            'expires_at' => $expiresAt,
-            'created_at' => (int) ($token['created_at'] ?? $now),
+            'expires' => $expiresAt,
+            'created' => (int) ($token['created'] ?? ($token['created_at'] ?? $now)),
+            'used' => $used,
             'requested_ip' => (string) ($token['requested_ip'] ?? ''),
         ];
     }
@@ -331,13 +362,8 @@ function admin_password_reset_token_exists(string $token): bool
         return false;
     }
 
-    $settings = admin_settings();
-    $tokens = admin_normalized_password_reset_tokens((array) ($settings['password_reset_tokens'] ?? []));
-
-    if (($settings['password_reset_tokens'] ?? []) !== $tokens) {
-        $settings['password_reset_tokens'] = $tokens;
-        admin_write_settings($settings);
-    }
+    $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens());
+    admin_write_password_reset_tokens($tokens);
 
     $hash = hash('sha256', $token);
 
@@ -352,20 +378,19 @@ function admin_password_reset_token_exists(string $token): bool
 
 function admin_generate_password_reset_link(): string
 {
-    $settings = admin_settings();
-    $tokens = admin_normalized_password_reset_tokens((array) ($settings['password_reset_tokens'] ?? []));
+    $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens(), false);
+    $now = time();
     $token = bin2hex(random_bytes(32));
     $tokens[] = [
         'hash' => hash('sha256', $token),
-        'expires_at' => time() + admin_password_reset_ttl_seconds(),
-        'created_at' => time(),
+        'expires' => $now + admin_password_reset_ttl_seconds(),
+        'created' => $now,
+        'used' => false,
         'requested_ip' => admin_client_ip(),
     ];
 
     // Keep only recent reset tokens to cap storage growth.
-    $tokens = array_slice($tokens, -5);
-    $settings['password_reset_tokens'] = $tokens;
-    admin_write_settings($settings);
+    admin_write_password_reset_tokens(array_slice($tokens, -5));
 
     $baseUrl = admin_absolute_script_url();
     $separator = str_contains($baseUrl, '?') ? '&' : '?';
@@ -395,12 +420,16 @@ function admin_consume_password_reset_token(string $token, string $newPassword):
     }
 
     $settings = admin_settings();
-    $tokens = admin_normalized_password_reset_tokens((array) ($settings['password_reset_tokens'] ?? []));
+    $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens(), false);
+    $now = time();
     $tokenHash = hash('sha256', $token);
     $hasMatch = false;
 
-    foreach ($tokens as $entry) {
-        if (hash_equals((string) $entry['hash'], $tokenHash)) {
+    foreach ($tokens as $index => $entry) {
+        $isUsable = !(bool) ($entry['used'] ?? false) && (int) ($entry['expires'] ?? 0) > $now;
+
+        if ($isUsable && hash_equals((string) $entry['hash'], $tokenHash)) {
+            $tokens[$index]['used'] = true;
             $hasMatch = true;
             break;
         }
@@ -412,8 +441,9 @@ function admin_consume_password_reset_token(string $token, string $newPassword):
 
     $settings['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
     $settings['password_updated_at'] = date('c');
-    $settings['password_reset_tokens'] = [];
+    unset($settings['password_reset_tokens']);
     admin_write_settings($settings);
+    admin_write_password_reset_tokens($tokens);
     admin_clear_login_attempts((string) ($settings['username'] ?? ''));
 
     return true;

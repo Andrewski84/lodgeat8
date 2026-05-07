@@ -2,9 +2,9 @@
     "kamer-1": {
         "title": "1",
         "summary": "",
-        "image": "kamer-1/CRW_7055.jpg",
+        "image": "kamer-1/crw-7067.jpg",
         "gallery": "kamer-1",
-        "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22492",
+        "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=nl-NL&room=22492",
         "features": [
             "‘Badkamer met zicht’",
             "Douche en wc",
@@ -15,7 +15,7 @@
             "Internet",
             "Bedlinnen en handdoeken",
             "Balkon en dakterras",
-            "Volledig gerenoveerde kamer,",
+            "Volledig gerenoveerde kamer",
             "Hedendaagse inrichting"
         ],
         "prices_heading": "",
@@ -28,7 +28,7 @@
         ],
         "translations": {
             "en": {
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=22492",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=en-GB&room=22492",
                 "prices_heading": "",
                 "extra_info": [
                     "Breakfast, Wi-Fi and taxes included.",
@@ -55,7 +55,7 @@
                 "nav_title": "Room 1"
             },
             "fr": {
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=22492",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=fr-FR&room=22492",
                 "prices_heading": "",
                 "extra_info": [
                     "Petit déjeuner, Wi-Fi et taxes inclus.",
@@ -85,7 +85,7 @@
             "nl": {
                 "title": "1",
                 "summary": "",
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22492",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=nl-NL&room=22492",
                 "features": [
                     "‘Badkamer met zicht’",
                     "Douche en wc",
@@ -96,7 +96,7 @@
                     "Internet",
                     "Bedlinnen en handdoeken",
                     "Balkon en dakterras",
-                    "Volledig gerenoveerde kamer,",
+                    "Volledig gerenoveerde kamer",
                     "Hedendaagse inrichting"
                 ],
                 "prices_heading": "",
@@ -117,7 +117,7 @@
         "summary": "",
         "image": "kamer-2/bgstr-room2.jpg",
         "gallery": "kamer-2",
-        "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=23747",
+        "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=nl-NL&room=23747",
         "features": [
             "‘Badkamer met zicht’",
             "Douche en wc",
@@ -128,7 +128,7 @@
             "Internet",
             "Bedlinnen en handdoeken",
             "Dakterras",
-            "Volledig gerenoveerde kamer,",
+            "Volledig gerenoveerde kamer",
             "Hedendaagse inrichting"
         ],
         "prices_heading": "",
@@ -141,7 +141,7 @@
         ],
         "translations": {
             "en": {
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=23747",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=en-GB&room=23747",
                 "prices_heading": "",
                 "extra_info": [
                     "Breakfast, Wi-Fi and taxes included.",
@@ -168,7 +168,7 @@
                 "prices": []
             },
             "fr": {
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=23747",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=fr-FR&room=23747",
                 "prices_heading": "",
                 "extra_info": [
                     "Petit déjeuner, Wi-Fi et taxes inclus.",
@@ -198,7 +198,7 @@
                 "title": "2",
                 "nav_title": "Kamer 2",
                 "summary": "",
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=23747",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=nl-NL&room=23747",
                 "features": [
                     "‘Badkamer met zicht’",
                     "Douche en wc",
@@ -209,7 +209,7 @@
                     "Internet",
                     "Bedlinnen en handdoeken",
                     "Dakterras",
-                    "Volledig gerenoveerde kamer,",
+                    "Volledig gerenoveerde kamer",
                     "Hedendaagse inrichting"
                 ],
                 "prices_heading": "",
@@ -227,9 +227,9 @@
     "kamer-3": {
         "title": "3",
         "summary": "",
-        "image": "kamer-3/CRW_7089.jpg",
+        "image": "kamer-3/crw-7155.jpg",
         "gallery": "kamer-3",
-        "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22493",
+        "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=nl-NL&room=22493",
         "features": [
             "Ingericht keukentje",
             "Douche en wc",
@@ -240,7 +240,7 @@
             "Kabeltelevisie en dvd-speler",
             "Internet",
             "Bedlinnen en handdoeken",
-            "Volledig gerenoveerde kamer,",
+            "Volledig gerenoveerde kamer",
             "Hedendaagse inrichting",
             "Dakterras"
         ],
@@ -254,7 +254,7 @@
         ],
         "translations": {
             "en": {
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=en-GB&Room=22493",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=en-GB&room=22493",
                 "prices_heading": "",
                 "extra_info": [
                     "Breakfast, Wi-Fi and taxes included.",
@@ -282,7 +282,7 @@
                 "prices": []
             },
             "fr": {
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=fr-FR&Room=22493",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=fr-FR&room=22493",
                 "prices_heading": "",
                 "extra_info": [
                     "Petit déjeuner, Wi-Fi et taxes inclus.",
@@ -312,7 +312,7 @@
                 "title": "3",
                 "nav_title": "Kamer 3",
                 "summary": "",
-                "booking_url": "https://reservations.cubilis.eu/lodging-at-8-leuven?Language=nl-NL&Room=22493",
+                "booking_url": "https://bookingengine.mylighthouse.com/lodging-at-8-leuven?language=nl-NL&room=22493",
                 "features": [
                     "Ingericht keukentje",
                     "Douche en wc",
@@ -323,7 +323,7 @@
                     "Kabeltelevisie en dvd-speler",
                     "Internet",
                     "Bedlinnen en handdoeken",
-                    "Volledig gerenoveerde kamer,",
+                    "Volledig gerenoveerde kamer",
                     "Hedendaagse inrichting",
                     "Dakterras"
                 ],

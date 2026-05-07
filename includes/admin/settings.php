@@ -12,7 +12,6 @@ function admin_default_settings(): array
         'username' => '',
         'password_hash' => '',
         'password_updated_at' => null,
-        'password_reset_tokens' => [],
     ];
 }
 

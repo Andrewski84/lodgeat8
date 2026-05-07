@@ -18,7 +18,7 @@
         <form data-link-form>
             <label>
                 Link URL
-                <input type="text" name="url" placeholder="https://example.com" required data-link-input>
+                <input type="url" name="url" placeholder="https://example.com" required data-link-input>
             </label>
             <label>
                 Weergave tekst (optioneel)

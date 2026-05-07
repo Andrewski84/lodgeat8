@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 function admin_validate_optional_url(string $value, string $label): void
 {
-    if ($value !== '' && filter_var($value, FILTER_VALIDATE_URL) === false) {
-        throw new RuntimeException($label . ' heeft geen geldige URL.');
+    if ($value !== '' && !is_safe_web_url($value)) {
+        throw new RuntimeException($label . ' moet beginnen met https:// of http://.');
     }
 }
 
@@ -13,6 +13,29 @@ function admin_validate_optional_email(string $value, string $label): void
     if ($value !== '' && filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException($label . ' heeft geen geldig e-mailadres.');
     }
+}
+
+function admin_validate_link_columns(array $columns, string $languageLabel): void
+{
+    foreach ($columns as $links) {
+        foreach ((array) $links as $link) {
+            $label = trim((string) ($link[0] ?? ''));
+            $url = trim((string) ($link[1] ?? ''));
+
+            if ($url !== '' && !is_safe_web_url($url)) {
+                throw new RuntimeException(
+                    'De link' . ($label !== '' ? ' "' . $label . '"' : '') . ' bij ' . $languageLabel . ' moet beginnen met https:// of http://.'
+                );
+            }
+        }
+    }
+}
+
+function admin_content_key_from_post(string $value, string $fallback): string
+{
+    $key = preg_replace('/[^a-z0-9_-]/', '', strtolower($value)) ?? '';
+
+    return $key !== '' ? $key : $fallback;
 }
 
 function admin_save_general(array $content, array $post, array $files = []): array
@@ -49,13 +72,13 @@ function admin_save_general(array $content, array $post, array $files = []): arr
 
     if ($logoUploads !== []) {
         if ($previousLogo !== '' && $previousLogo !== $logoUploads[0]) {
-            admin_queue_media_deletion([$previousLogo]);
+            admin_queue_media_deletion([$previousLogo], false);
         }
 
         $content['site']['logo'] = $logoUploads[0];
     } elseif (($post['site']['logo_remove'] ?? '0') === '1') {
         if ($previousLogo !== '') {
-            admin_queue_media_deletion([$previousLogo]);
+            admin_queue_media_deletion([$previousLogo], false);
         }
 
         $content['site']['logo'] = '';
@@ -67,13 +90,13 @@ function admin_save_general(array $content, array $post, array $files = []): arr
 
     if ($faviconUploads !== []) {
         if ($previousFavicon !== '' && $previousFavicon !== $faviconUploads[0]) {
-            admin_queue_media_deletion([$previousFavicon]);
+            admin_queue_media_deletion([$previousFavicon], false);
         }
 
         $content['site']['favicon'] = $faviconUploads[0];
     } elseif (($post['site']['favicon_remove'] ?? '0') === '1') {
         if ($previousFavicon !== '') {
-            admin_queue_media_deletion([$previousFavicon]);
+            admin_queue_media_deletion([$previousFavicon], false);
         }
 
         $content['site']['favicon'] = '';
@@ -131,8 +154,12 @@ function admin_save_page_content(array $content, string $pageKey, array $post, a
 
     if (array_key_exists('map_url', $post)) {
         $mapUrl = trim((string) $post['map_url']);
-        admin_validate_optional_url($mapUrl, 'Google Maps URL');
-        $content['pages'][$pageKey]['map_url'] = $mapUrl;
+
+        if ($mapUrl !== '' && map_embed_url($mapUrl) === '') {
+            throw new RuntimeException('Google Maps URL moet een geldige https:// of http:// link zijn.');
+        }
+
+        $content['pages'][$pageKey]['map_url'] = $mapUrl === '' ? '' : map_embed_url($mapUrl);
     }
 
     $galleryUploads = admin_upload_images($files['gallery_uploads'] ?? [], admin_media_directory($pageKey));
@@ -140,11 +167,11 @@ function admin_save_page_content(array $content, string $pageKey, array $post, a
     $removedGalleryItems = admin_removed_media_from_post($galleryPost);
 
     if (isset($post['gallery_key']) && isset($post['gallery']) && admin_media_post_has_files($galleryPost)) {
-        $galleryKey = (string) $post['gallery_key'];
+        $galleryKey = admin_content_key_from_post((string) $post['gallery_key'], $pageKey);
         $content['galleries'][$galleryKey] = admin_media_from_post($galleryPost, $galleryUploads);
         $content['pages'][$pageKey]['gallery'] = $galleryKey;
     } elseif ($galleryUploads !== []) {
-        $galleryKey = (string) ($post['gallery_key'] ?? $content['pages'][$pageKey]['gallery'] ?? $pageKey);
+        $galleryKey = admin_content_key_from_post((string) ($post['gallery_key'] ?? $content['pages'][$pageKey]['gallery'] ?? $pageKey), $pageKey);
         $content['galleries'][$galleryKey] = admin_append_uploaded_media($content['galleries'][$galleryKey] ?? [], $galleryUploads);
         $content['pages'][$pageKey]['gallery'] = $galleryKey;
     }
@@ -213,6 +240,8 @@ function admin_save_room_content(array $content, string $roomKey, array $post, a
         admin_queue_media_deletion($removedGalleryItems);
     }
 
+    $content['rooms'][$roomKey]['image'] = admin_first_media_file((array) ($content['galleries'][$roomKey] ?? []));
+
     return $content;
 }
 
@@ -229,6 +258,7 @@ function admin_save_links_content(array $content, array $post): array
             ? admin_columns_from_link_sections($languagePost['sections'])
             : admin_columns_from_link_rows($languagePost['links'] ?? []);
 
+        admin_validate_link_columns($columns, $label);
         admin_set_translation($content['pages']['links'], $language, 'columns', $columns);
     }
 

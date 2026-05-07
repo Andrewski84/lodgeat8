@@ -261,17 +261,7 @@ function contact_send_email(array $config, array $message): bool
         '',
         $message['message'],
     ]);
-    $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'From: Lodging at 8 <' . $to . '>',
-    ];
-
-    if ($from !== false) {
-        $headers[] = 'Reply-To: ' . $from;
-    }
-
-    return @mail($to, $subject, $body, implode("\r\n", $headers));
+    return app_send_email($config, $to, $subject, $body, $from !== false ? $from : '');
 }
 
 function contact_submission_min_seconds(): int

@@ -21,16 +21,8 @@
             "title": "Gevel frontaal"
         },
         {
-            "file": "kamer-1/CRW_7055.jpg",
+            "file": "kamer-1/crw-7067.jpg",
             "title": "Room 1 – 6"
-        },
-        {
-            "file": "kamer-3/CRW_6952.jpg",
-            "title": "Terras 1"
-        },
-        {
-            "file": "kamer-3/CRW_7089.jpg",
-            "title": "Room 3 – 2"
         },
         {
             "file": "home/breakfast1.jpg",
@@ -101,7 +93,15 @@
     ],
     "kamer-1": [
         {
+            "file": "kamer-1/crw-7067.jpg",
+            "title": ""
+        },
+        {
             "file": "kamer-1/room1-3.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-1/room1-6.jpg",
             "title": ""
         },
         {
@@ -109,7 +109,23 @@
             "title": ""
         },
         {
-            "file": "kamer-1/room1-6.jpg",
+            "file": "kamer-1/room1-12.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-1/crw-7026.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-1/crw-7049.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-1/room1-7.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-1/crw-7054.jpg",
             "title": ""
         }
     ],
@@ -125,20 +141,52 @@
         {
             "file": "kamer-2/bgstr-room2door.jpg",
             "title": "bgstr-room2door"
+        },
+        {
+            "file": "kamer-2/crw-6998.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-7012.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-7014.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-7018.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-7020.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/room2-1.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/room2-2.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-6981.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-6989.jpg",
+            "title": ""
+        },
+        {
+            "file": "kamer-2/crw-6992.jpg",
+            "title": ""
         }
     ],
     "kamer-3": [
         {
-            "file": "kamer-3/CRW_7089.jpg",
-            "title": "Kamer 3"
-        },
-        {
-            "file": "kamer-3/bgstr-bathroom.jpg",
-            "title": "Badkamer"
-        },
-        {
-            "file": "kamer-3/CRW_6952.jpg",
-            "title": "Terras"
+            "file": "kamer-3/crw-7155.jpg",
+            "title": ""
         }
     ]
 }

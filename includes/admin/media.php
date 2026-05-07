@@ -51,6 +51,8 @@ function admin_delete_unreferenced_media(array $files, array $content): array
     $result = [
         'deleted' => [],
         'failed' => [],
+        'kept' => [],
+        'missing' => [],
     ];
 
     if ($directory === false) {
@@ -62,18 +64,37 @@ function admin_delete_unreferenced_media(array $files, array $content): array
     foreach (array_values(array_unique($files)) as $file) {
         $file = admin_safe_media_filename((string) $file);
 
-        if ($file === '' || isset($referenced[$file])) {
+        if ($file === '') {
             continue;
         }
 
-        $target = $directoryPrefix . $file;
+        if (isset($referenced[$file])) {
+            $result['kept'][] = $file;
+            continue;
+        }
+
+        $target = $directoryPrefix . str_replace('/', DIRECTORY_SEPARATOR, $file);
         $targetPath = realpath($target);
 
-        if ($targetPath === false || substr($targetPath, 0, strlen($directoryPrefix)) !== $directoryPrefix) {
+        if ($targetPath === false) {
+            if (file_exists($target)) {
+                $result['failed'][] = $file;
+            } else {
+                $result['missing'][] = $file;
+            }
             continue;
         }
 
-        if (!@unlink($targetPath)) {
+        $targetInsideMedia = DIRECTORY_SEPARATOR === '\\'
+            ? strncasecmp($targetPath, $directoryPrefix, strlen($directoryPrefix)) === 0
+            : strncmp($targetPath, $directoryPrefix, strlen($directoryPrefix)) === 0;
+
+        if (!$targetInsideMedia || (!is_file($targetPath) && !is_link($target))) {
+            $result['failed'][] = $file;
+            continue;
+        }
+
+        if (!@unlink($target)) {
             $result['failed'][] = $file;
             continue;
         }
@@ -84,32 +105,131 @@ function admin_delete_unreferenced_media(array $files, array $content): array
     return $result;
 }
 
-function admin_queue_media_deletion(array $files): void
+function admin_clean_media_file_list(array $files): array
 {
-    if (!isset($GLOBALS['admin_pending_media_deletions']) || !is_array($GLOBALS['admin_pending_media_deletions'])) {
-        $GLOBALS['admin_pending_media_deletions'] = [];
-    }
+    $clean = [];
 
     foreach ($files as $file) {
         $file = admin_safe_media_filename((string) $file);
 
         if ($file !== '') {
-            $GLOBALS['admin_pending_media_deletions'][] = $file;
+            $clean[] = $file;
         }
     }
 
-    $GLOBALS['admin_pending_media_deletions'] = array_values(array_unique($GLOBALS['admin_pending_media_deletions']));
+    return array_values(array_unique($clean));
 }
 
-function admin_flush_media_deletions(array $content): array
+function admin_queue_media_deletion(array $files, bool $removeReferences = true): void
+{
+    if (!isset($GLOBALS['admin_pending_media_deletions']) || !is_array($GLOBALS['admin_pending_media_deletions'])) {
+        $GLOBALS['admin_pending_media_deletions'] = [];
+    }
+
+    $GLOBALS['admin_pending_media_deletions'] = admin_clean_media_file_list(array_merge(
+        $GLOBALS['admin_pending_media_deletions'],
+        $files
+    ));
+
+    if (!$removeReferences) {
+        return;
+    }
+
+    if (!isset($GLOBALS['admin_pending_media_reference_removals']) || !is_array($GLOBALS['admin_pending_media_reference_removals'])) {
+        $GLOBALS['admin_pending_media_reference_removals'] = [];
+    }
+
+    $GLOBALS['admin_pending_media_reference_removals'] = admin_clean_media_file_list(array_merge(
+        $GLOBALS['admin_pending_media_reference_removals'],
+        $files
+    ));
+}
+
+function admin_take_media_deletions(): array
 {
     $files = $GLOBALS['admin_pending_media_deletions'] ?? [];
     $GLOBALS['admin_pending_media_deletions'] = [];
 
-    return is_array($files) ? admin_delete_unreferenced_media($files, $content) : [
-        'deleted' => [],
-        'failed' => [],
-    ];
+    return is_array($files) ? admin_clean_media_file_list($files) : [];
+}
+
+function admin_take_media_reference_removals(): array
+{
+    $files = $GLOBALS['admin_pending_media_reference_removals'] ?? [];
+    $GLOBALS['admin_pending_media_reference_removals'] = [];
+
+    return is_array($files) ? admin_clean_media_file_list($files) : [];
+}
+
+function admin_media_item_file($item): string
+{
+    if (is_array($item)) {
+        return admin_safe_media_filename((string) ($item['file'] ?? ''));
+    }
+
+    return admin_safe_media_filename((string) $item);
+}
+
+function admin_remove_media_references(array &$content, array $files): void
+{
+    $remove = array_fill_keys(array_map('strval', $files), true);
+
+    if ($remove === []) {
+        return;
+    }
+
+    foreach (['logo', 'favicon'] as $field) {
+        $file = admin_safe_media_filename((string) ($content['site'][$field] ?? ''));
+
+        if ($file !== '' && isset($remove[$file])) {
+            $content['site'][$field] = '';
+        }
+    }
+
+    if (isset($content['backgrounds']) && is_array($content['backgrounds'])) {
+        $content['backgrounds'] = array_values(array_filter(
+            $content['backgrounds'],
+            static function ($item) use ($remove): bool {
+                $file = admin_media_item_file($item);
+
+                return $file === '' || !isset($remove[$file]);
+            }
+        ));
+    }
+
+    if (isset($content['galleries']) && is_array($content['galleries'])) {
+        foreach ($content['galleries'] as $galleryKey => $gallery) {
+            if (!is_array($gallery)) {
+                continue;
+            }
+
+            $content['galleries'][$galleryKey] = array_values(array_filter(
+                $gallery,
+                static function ($item) use ($remove): bool {
+                    $file = admin_media_item_file($item);
+
+                    return $file === '' || !isset($remove[$file]);
+                }
+            ));
+        }
+    }
+
+    if (isset($content['rooms']) && is_array($content['rooms'])) {
+        foreach ($content['rooms'] as $roomKey => $room) {
+            if (!is_array($room)) {
+                continue;
+            }
+
+            $file = admin_safe_media_filename((string) ($room['image'] ?? ''));
+
+            if ($file === '' || !isset($remove[$file])) {
+                continue;
+            }
+
+            $galleryKey = (string) ($room['gallery'] ?? $roomKey);
+            $content['rooms'][$roomKey]['image'] = admin_first_media_file((array) ($content['galleries'][$galleryKey] ?? []));
+        }
+    }
 }
 
 function admin_ini_size_to_bytes(string $value): int
@@ -244,7 +364,7 @@ function admin_upload_images(array $files, string $directory = ''): array
 
         $temporaryName = (string) ($temporaryNames[$index] ?? '');
 
-        if (!is_uploaded_file($temporaryName) || getimagesize($temporaryName) === false) {
+        if (!is_uploaded_file($temporaryName) || @getimagesize($temporaryName) === false) {
             throw new RuntimeException('Upload alleen geldige afbeeldingsbestanden.');
         }
 

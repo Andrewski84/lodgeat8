@@ -149,9 +149,11 @@ function admin_pairs_from_value($value): array
 function admin_normalize_media_item($item): array
 {
     if (is_string($item)) {
+        $file = admin_safe_media_filename($item);
+
         return [
-            'file' => $item,
-            'title' => pathinfo($item, PATHINFO_FILENAME),
+            'file' => $file,
+            'title' => pathinfo($file, PATHINFO_FILENAME),
         ];
     }
 
@@ -162,7 +164,7 @@ function admin_normalize_media_item($item): array
         ];
     }
 
-    $file = (string) ($item['file'] ?? '');
+    $file = admin_safe_media_filename((string) ($item['file'] ?? ''));
     $title = (string) ($item['title'] ?? $item['alt'] ?? pathinfo($file, PATHINFO_FILENAME));
 
     return [
@@ -190,11 +192,19 @@ function admin_media_from_post(array $post, array $uploaded = []): array
 {
     $files = $post['file'] ?? [];
     $titles = $post['title'] ?? [];
-    $remove = array_flip(array_map('strval', $post['remove'] ?? []));
+    $remove = [];
     $items = [];
 
+    foreach (($post['remove'] ?? []) as $file) {
+        $file = admin_safe_media_filename((string) $file);
+
+        if ($file !== '') {
+            $remove[$file] = true;
+        }
+    }
+
     foreach ($files as $index => $file) {
-        $file = trim((string) $file);
+        $file = admin_safe_media_filename((string) $file);
 
         if ($file === '' || isset($remove[$file])) {
             continue;
@@ -220,7 +230,7 @@ function admin_media_from_post(array $post, array $uploaded = []): array
 function admin_media_post_has_files(array $post): bool
 {
     foreach (($post['file'] ?? []) as $file) {
-        if (trim((string) $file) !== '') {
+        if (admin_safe_media_filename((string) $file) !== '') {
             return true;
         }
     }
@@ -255,6 +265,19 @@ function admin_append_uploaded_media(array $items, array $uploaded): array
     }
 
     return $items;
+}
+
+function admin_first_media_file(array $items): string
+{
+    foreach (admin_normalize_media_items($items) as $item) {
+        $file = admin_safe_media_filename((string) ($item['file'] ?? ''));
+
+        if ($file !== '') {
+            return $file;
+        }
+    }
+
+    return '';
 }
 
 function admin_safe_media_filename(string $file): string

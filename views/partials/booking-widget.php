@@ -2,6 +2,7 @@
 $bookingWidget = booking_widget_settings($config);
 $bookingAction = booking_widget_action($bookingWidget);
 $bookingLanguage = booking_widget_language($bookingWidget);
+$bookingFallback = (string) ($bookingWidget['fallback_action'] ?? '');
 $bookingCtaLabel = 'Book Now';
 ?>
 <?php if ($bookingWidget['enabled'] && $bookingAction !== ''): ?>
@@ -30,8 +31,8 @@ $bookingCtaLabel = 'Book Now';
             </form>
         </div>
     </details>
-<?php else: ?>
-    <a class="book-now" href="<?= e($config['site']['reservation_url'] ?? $config['site']['booking_url'] ?? '') ?>" target="_blank" rel="noopener">
+<?php elseif (is_safe_web_url($bookingFallback)): ?>
+    <a class="book-now" href="<?= e($bookingFallback) ?>" target="_blank" rel="noopener">
         <span class="book-now-text"><?= e($bookingCtaLabel) ?></span>
         <span class="book-now-icon" aria-hidden="true"></span>
     </a>

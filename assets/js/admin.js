@@ -223,9 +223,30 @@ const validatePhotoFiles = (manager, files) => {
     return false;
 };
 
+const photoMessageHasDeleteDetails = (message) => (
+    message.includes('Foto definitief verwijderd')
+    || message.includes('foto\'s definitief verwijderd')
+    || message.includes('Verwijderd uit assets')
+    || message.includes('stond al niet meer in assets/img')
+    || message.includes('stonden al niet meer in assets/img')
+);
+
+const photoMessageIsTechnicalMediaDetail = (message) => (
+    photoMessageHasDeleteDetails(message)
+    || message.includes('assets/img')
+    || message.includes('bestandsrechten')
+);
+
 const photoRequestErrorMessage = (xhr, response) => {
     if (Array.isArray(response.errors) && response.errors.length) {
-        return response.errors.join(' ');
+        const errors = response.errors.map((message) => String(message).trim()).filter(Boolean);
+        const visibleErrors = errors.filter((message) => !photoMessageIsTechnicalMediaDetail(message));
+
+        if (visibleErrors.length > 0) {
+            return visibleErrors.join(' ');
+        }
+
+        return 'De foto kon niet volledig verwijderd worden. Probeer opnieuw of contacteer je webbeheerder.';
     }
 
     if (xhr.status === 413) {
@@ -237,7 +258,7 @@ const photoRequestErrorMessage = (xhr, response) => {
     }
 
     if (xhr.status >= 500) {
-        return `De server kon de upload niet verwerken (HTTP ${xhr.status}). Controleer de serverlog en de rechten op assets/img.`;
+        return `De server kon de upload niet verwerken (HTTP ${xhr.status}). Probeer opnieuw of contacteer je webbeheerder.`;
     }
 
     if (xhr.status > 0) {
@@ -245,6 +266,37 @@ const photoRequestErrorMessage = (xhr, response) => {
     }
 
     return 'De upload werd onderbroken. Controleer je verbinding en probeer opnieuw met minder of kleinere foto\'s.';
+};
+
+const photoSuccessMessage = (response, fallback, isUpload = false) => {
+    const messages = Array.isArray(response.messages)
+        ? response.messages.map((message) => String(message).trim()).filter(Boolean)
+        : [];
+
+    if (messages.length === 0) {
+        return fallback;
+    }
+
+    const hasDeletedPhoto = messages.some(photoMessageHasDeleteDetails);
+
+    if (hasDeletedPhoto) {
+        const saveMessage = messages.find((message) => (
+            /^(Kamer|Pagina) is bewaard\.$/.test(message)
+            || message === 'Algemene instellingen zijn bewaard.'
+        ));
+        return [saveMessage, 'Foto definitief verwijderd.'].filter(Boolean).join(' ');
+    }
+
+    const visibleMessages = messages.filter((message) => (
+        !photoMessageIsTechnicalMediaDetail(message)
+        && !message.includes('server')
+    ));
+
+    if (visibleMessages.length > 0) {
+        return visibleMessages.join(' ');
+    }
+
+    return isUpload ? 'Upload opgeslagen. Foto\'s laden...' : fallback;
 };
 
 const adminAjaxUrl = (form) => {
@@ -887,6 +939,49 @@ if (linkModal && linkForm && linkInput && linkText) {
     });
 }
 
+const technicalModal = document.querySelector('[data-technical-modal]');
+const technicalModalOpen = document.querySelector('[data-technical-modal-open]');
+const technicalHelpToggle = document.querySelector('[data-technical-help-toggle]');
+const technicalHelp = document.querySelector('[data-technical-help]');
+
+const closeTechnicalModal = () => {
+    if (!technicalModal) {
+        return;
+    }
+
+    technicalModal.hidden = true;
+    document.body.classList.remove('has-technical-modal');
+};
+
+if (technicalModal && technicalModalOpen) {
+    technicalModalOpen.addEventListener('click', () => {
+        technicalModal.hidden = false;
+        document.body.classList.add('has-technical-modal');
+        technicalModal.querySelector('form input, form select, form textarea, form button')?.focus();
+    });
+
+    technicalHelpToggle?.addEventListener('click', () => {
+        if (!technicalHelp) {
+            return;
+        }
+
+        const isOpening = technicalHelp.hidden;
+
+        technicalHelp.hidden = !isOpening;
+        technicalHelpToggle.setAttribute('aria-expanded', String(isOpening));
+    });
+
+    technicalModal.querySelectorAll('[data-technical-modal-close]').forEach((element) => {
+        element.addEventListener('click', closeTechnicalModal);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !technicalModal.hidden) {
+            closeTechnicalModal();
+        }
+    });
+}
+
 document.querySelectorAll('textarea[data-rich-text]').forEach((textarea) => {
     const wrapper = document.createElement('div');
     const toolbar = document.createElement('div');
@@ -1427,9 +1522,11 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
         }
 
         if (xhr.status >= 200 && xhr.status < 300 && response.success !== false) {
-            const successMessage = Array.isArray(response.messages) && response.messages.length
-                ? response.messages.join(' ')
-                : (isUpload ? 'Upload opgeslagen. Foto\'s laden...' : 'Automatisch opgeslagen.');
+            const successMessage = photoSuccessMessage(
+                response,
+                isUpload ? 'Upload opgeslagen. Foto\'s laden...' : 'Automatisch opgeslagen.',
+                isUpload
+            );
 
             if (options.deferSuccessStatus !== true) {
                 setPhotoStatus(manager, successMessage, 'success', 100);

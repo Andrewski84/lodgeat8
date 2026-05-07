@@ -35,7 +35,8 @@ body.has-unsaved-modal {
     overflow: hidden;
 }
 
-body.has-link-modal {
+body.has-link-modal,
+body.has-technical-modal {
     overflow: hidden;
 }
 
@@ -1117,7 +1118,8 @@ select:focus {
     margin-top: 6px;
 }
 
-.link-modal {
+.link-modal,
+.technical-modal {
     position: fixed;
     inset: 0;
     z-index: 100;
@@ -1126,18 +1128,21 @@ select:focus {
     padding: 24px;
 }
 
-.link-modal[hidden] {
+.link-modal[hidden],
+.technical-modal[hidden] {
     display: none !important;
 }
 
-.link-modal-backdrop {
+.link-modal-backdrop,
+.technical-modal-backdrop {
     position: absolute;
     inset: 0;
     background: rgba(22, 22, 22, 0.52);
     cursor: pointer;
 }
 
-.link-modal-panel {
+.link-modal-panel,
+.technical-modal-panel {
     position: relative;
     z-index: 1;
     display: grid;
@@ -1149,11 +1154,19 @@ select:focus {
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
 }
 
-.link-modal-panel h2 {
+.technical-modal-panel {
+    width: min(100%, 760px);
+    max-height: min(86vh, 760px);
+    overflow: auto;
+}
+
+.link-modal-panel h2,
+.technical-modal-panel h2 {
     margin: 0;
 }
 
-.link-modal-panel form {
+.link-modal-panel form,
+.technical-modal-panel form {
     display: grid;
     gap: 16px;
 }
@@ -1181,7 +1194,85 @@ select:focus {
     border-color: var(--admin-accent);
 }
 
-.link-modal-actions {
+.technical-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.technical-modal-tools {
+    display: inline-flex;
+    gap: 8px;
+}
+
+.technical-help-toggle {
+    width: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0;
+    border-radius: 999px;
+    background: var(--admin-surface);
+    color: var(--admin-ink);
+    border: 1px solid var(--admin-line);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1;
+}
+
+.technical-help-toggle:hover,
+.technical-help-toggle:focus-visible,
+.technical-help-toggle[aria-expanded="true"] {
+    background: var(--admin-ink);
+    color: #fff;
+    outline: 0;
+}
+
+.technical-modal-help {
+    margin: 0;
+    color: var(--admin-muted);
+    line-height: 1.45;
+}
+
+.technical-help {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    background: #fff8ef;
+    border: 1px solid var(--admin-line);
+}
+
+.technical-help[hidden] {
+    display: none !important;
+}
+
+.technical-help dl {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+}
+
+.technical-help div {
+    display: grid;
+    gap: 4px;
+}
+
+.technical-help dt {
+    color: var(--admin-ink);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.technical-help dd,
+.technical-help p {
+    margin: 0;
+    color: var(--admin-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.link-modal-actions,
+.technical-modal-actions {
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
@@ -1189,7 +1280,8 @@ select:focus {
     margin-top: 6px;
 }
 
-.link-modal-actions button {
+.link-modal-actions button,
+.technical-modal-actions button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1203,19 +1295,24 @@ select:focus {
 }
 
 .link-modal-actions button:hover,
-.link-modal-actions button:focus-visible {
+.link-modal-actions button:focus-visible,
+.technical-modal-actions button:hover,
+.technical-modal-actions button:focus-visible {
     background: #8f0057;
     outline: 0;
 }
 
-.link-modal-actions .secondary-button {
+.link-modal-actions .secondary-button,
+.technical-modal-actions .secondary-button {
     background: var(--admin-surface);
     color: var(--admin-ink);
     border: 1px solid var(--admin-line);
 }
 
 .link-modal-actions .secondary-button:hover,
-.link-modal-actions .secondary-button:focus-visible {
+.link-modal-actions .secondary-button:focus-visible,
+.technical-modal-actions .secondary-button:hover,
+.technical-modal-actions .secondary-button:focus-visible {
     background: var(--admin-ink);
     color: #fff;
     border-color: var(--admin-ink);

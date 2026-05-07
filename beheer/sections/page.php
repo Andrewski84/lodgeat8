@@ -15,13 +15,14 @@
         <?php if ($section === 'locatie'): ?>
             <label class="wide">
                 Google Maps URL
-                <input name="map_url" value="<?= e($page['map_url'] ?? '') ?>" placeholder="https://www.google.com/maps/...">
+                <input type="url" name="map_url" value="<?= e($page['map_url'] ?? '') ?>" placeholder="https://www.google.com/maps/...">
                 <small>Plak hier de Google Maps link of de src-url uit de Google Maps insluitcode.</small>
             </label>
         <?php endif; ?>
-        <?php if ($section === 'leuven'): ?>
-            <?php beheer_photo_grid('gallery', $config['galleries']['leuven'] ?? [], 'gallery_uploads', 'Carousel foto\'s', 'Deze foto\'s worden rechts op de Leuven-pagina getoond.'); ?>
-            <input type="hidden" name="gallery_key" value="leuven">
+        <?php if (isset($page['gallery']) && in_array($section, ['home', 'leuven'], true)): ?>
+            <?php $galleryKey = (string) $page['gallery']; ?>
+            <?php beheer_photo_grid('gallery', $config['galleries'][$galleryKey] ?? [], 'gallery_uploads', 'Carousel foto\'s', 'Deze foto\'s worden rechts op de pagina getoond.'); ?>
+            <input type="hidden" name="gallery_key" value="<?= e($galleryKey) ?>">
         <?php endif; ?>
         <div class="save-bar"><span>Pagina bewaren</span><button type="submit">Bewaren</button></div>
     </form>

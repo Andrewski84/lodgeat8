@@ -168,6 +168,7 @@ foreach ([
     'README.md',
     'includes/bootstrap.php',
     'includes/content.php',
+    'includes/mail.php',
     'includes/admin.php',
     'includes/admin/settings.php',
     'includes/admin/session.php',
@@ -218,6 +219,7 @@ if (is_dir(content_directory_path())) {
 }
 
 foreach ([
+    'includes/mail.php',
     'includes/admin/settings.php',
     'includes/admin/session.php',
     'includes/admin/auth.php',
@@ -241,6 +243,27 @@ if (is_file(admin_settings_path())) {
     } else {
         $add($warnings, 'storage/admin.php bestaat lokaal. Upload dit runtime loginbestand niet vanuit development.');
     }
+}
+
+if (is_file(app_mail_settings_path())) {
+    if ($pathIsGitTracked('storage/mail-settings.json')) {
+        $add($errors, 'storage/mail-settings.json staat in git. Dit kan SMTP-geheimen bevatten en mag niet worden gedeployed vanuit development.');
+    } else {
+        $add($warnings, 'storage/mail-settings.json bestaat lokaal. Controleer dat deze runtime mailinstellingen niet in git staan.');
+    }
+}
+
+if (is_file(admin_password_reset_tokens_path())) {
+    if ($pathIsGitTracked('storage/reset_tokens.json')) {
+        $add($errors, 'storage/reset_tokens.json staat in git. Reset-tokens mogen nooit worden mee gedeployed.');
+    } else {
+        $add($ok, 'storage/reset_tokens.json staat buiten git.');
+    }
+}
+
+$mailSettings = app_mail_settings();
+if (($mailSettings['enabled'] ?? false) && !app_mail_bootstrap_phpmailer()) {
+    $add($warnings, 'SMTP via PHPMailer staat aan, maar PHPMailer werd niet gevonden. Plaats vendor/autoload.php of PHPMailer/src op de server.');
 }
 
 $content = load_content();
@@ -310,8 +333,20 @@ foreach ($requiredPages as $pageKey) {
 }
 
 $mapUrl = trim((string) ($content['pages']['locatie']['map_url'] ?? ''));
-if ($mapUrl !== '' && filter_var($mapUrl, FILTER_VALIDATE_URL) === false) {
-    $add($errors, 'Google Maps URL op locatie is geen geldige URL.');
+if ($mapUrl !== '' && map_embed_url($mapUrl) === '') {
+    $add($errors, 'Google Maps URL op locatie is geen geldige https:// of http:// URL.');
+}
+
+$linkColumns = $content['pages']['links']['columns'] ?? [];
+foreach ((array) $linkColumns as $heading => $links) {
+    foreach ((array) $links as $link) {
+        $linkLabel = trim((string) ($link[0] ?? ''));
+        $linkUrl = trim((string) ($link[1] ?? ''));
+
+        if ($linkUrl !== '' && !is_safe_web_url($linkUrl)) {
+            $add($errors, 'Link URL is ongeldig bij ' . (string) $heading . ($linkLabel !== '' ? ' / ' . $linkLabel : '') . '.');
+        }
+    }
 }
 
 $requiredRooms = ['kamer-1', 'kamer-2', 'kamer-3'];
@@ -335,7 +370,7 @@ foreach ($requiredRooms as $roomKey) {
             $add($warnings, $roomKey . ' mist een titel voor ' . $label . '.');
         }
 
-        if ($bookingUrl === '' || filter_var($bookingUrl, FILTER_VALIDATE_URL) === false) {
+        if ($bookingUrl === '' || !is_safe_web_url($bookingUrl)) {
             $add($errors, $roomKey . ' mist een geldige booking link voor ' . $label . '.');
         }
     }

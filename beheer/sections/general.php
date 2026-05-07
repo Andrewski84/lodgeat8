@@ -49,7 +49,7 @@
             </div>
             <label class="wide">
                 Reservatie fallback link
-                <input name="site[reservation_url]" value="<?= e($config['site']['reservation_url'] ?? '') ?>">
+                <input type="url" name="site[reservation_url]" value="<?= e($config['site']['reservation_url'] ?? '') ?>">
             </label>
             <div class="wide">
                 <?php beheer_photo_grid('backgrounds', $config['backgrounds'] ?? [], 'background_uploads', 'Achtergrond foto\'s', 'Sleep foto\'s om de volgorde te wijzigen. Nieuwe uploads worden achteraan toegevoegd.'); ?>

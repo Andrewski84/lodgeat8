@@ -1,8 +1,14 @@
 *.log
 *.tmp
+storage/tmp/
+release/
+CODEBASE_ANALYSIS.md
+UX_AUDIT_REPORT.md
 
 # Runtime contact submissions are stored locally and should not be deployed from development.
 storage/contact-messages.json
 storage/contact-rate-limit.json
 storage/admin-login-attempts.json
+storage/mail-settings.json
+storage/reset_tokens.json
 storage/admin.php

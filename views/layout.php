@@ -57,20 +57,6 @@
     </main>
 
     <?php require __DIR__ . '/partials/footer.php'; ?>
-    <?php $languageLabels = supported_languages(); ?>
-    <?php $mobileLanguageCode = strtoupper($currentLanguage); ?>
-    <details class="language-picker mobile-floating-language-picker">
-        <summary aria-label="Taal kiezen">
-            <span class="language-picker-label"><?= e($mobileLanguageCode) ?></span>
-        </summary>
-        <div class="language-menu">
-            <?php foreach ($languageLabels as $code => $label): ?>
-                <a href="<?= e(url_for($pageKey, $code)) ?>"<?= $code === $currentLanguage ? ' aria-current="true"' : '' ?>>
-                    <?= e($label) ?>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </details>
 
     <?php $footerLogo = trim((string) ($config['site']['logo'] ?? '')); ?>
     <?php if ($footerLogo !== ''): ?>

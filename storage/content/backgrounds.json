@@ -12,8 +12,8 @@
         "title": "bgstr-room2"
     },
     {
-        "file": "kamer-1/bgstr-dakterras.jpg",
-        "title": "bgstr-dakterras"
+        "file": "kamer-1/room1-12.jpg",
+        "title": "room1-12"
     },
     {
         "file": "home/bgstr-breakfast2.jpg",
@@ -46,9 +46,5 @@
     {
         "file": "home/bgstr-pickwick.jpg",
         "title": "bgstr-pickwick"
-    },
-    {
-        "file": "kamer-3/bgstr-bathroom.jpg",
-        "title": "bgstr-bathroom"
     }
 ]
