@@ -261,6 +261,35 @@ if (is_file(admin_password_reset_tokens_path())) {
     }
 }
 
+if (is_file(admin_password_reset_attempts_path())) {
+    if ($pathIsGitTracked('storage/password-reset-attempts.json')) {
+        $add($errors, 'storage/password-reset-attempts.json staat in git. Reset rate-limit data mag niet worden gedeployed.');
+    } else {
+        $add($ok, 'storage/password-reset-attempts.json staat buiten git.');
+    }
+}
+
+$securityHeaders = app_security_headers();
+$contentSecurityPolicy = (string) ($securityHeaders['Content-Security-Policy'] ?? '');
+
+if ($contentSecurityPolicy === '') {
+    $add($errors, 'Content-Security-Policy header ontbreekt.');
+} else {
+    foreach (['script-src', 'object-src', 'frame-ancestors', 'base-uri'] as $directive) {
+        if (!str_contains($contentSecurityPolicy, $directive)) {
+            $add($errors, 'Content-Security-Policy mist directive: ' . $directive . '.');
+        }
+    }
+
+    $add($ok, 'Content-Security-Policy is geconfigureerd.');
+}
+
+if (($securityHeaders['X-Frame-Options'] ?? '') === 'DENY') {
+    $add($ok, 'X-Frame-Options staat op DENY.');
+} else {
+    $add($errors, 'X-Frame-Options header ontbreekt of staat niet op DENY.');
+}
+
 $mailSettings = app_mail_settings();
 if (($mailSettings['enabled'] ?? false) && !app_mail_bootstrap_phpmailer()) {
     $add($warnings, 'SMTP via PHPMailer staat aan, maar PHPMailer werd niet gevonden. Plaats vendor/autoload.php of PHPMailer/src op de server.');
@@ -295,6 +324,12 @@ foreach ($contentStrings as $path => $value) {
 
     if (str_contains($value, '<strong><strong>') || str_contains($value, '<a></a>') || str_contains($value, '&amp;amp;')) {
         $add($warnings, 'Mogelijk rich-text artefact gevonden in ' . $path . '.');
+    }
+
+    $renderedHtml = rich_text_html($value);
+
+    if (preg_match('/<\s*(script|style|iframe|object|embed|img)\b|\son[a-z]+\s*=|javascript\s*:/i', $renderedHtml) === 1) {
+        $add($errors, 'Server-side HTML sanitization liet risicovolle HTML door in ' . $path . '.');
     }
 }
 

@@ -20,6 +20,7 @@ if (($page['type'] ?? '') === 'contact' && ($page['contact_form_enabled'] ?? tru
         try {
             $contactResult = handle_contact_submission($config, $_POST);
         } catch (Throwable $exception) {
+            app_log_exception($exception, 'contact submission');
             $contactResult = contact_empty_result();
             $contactResult['submitted'] = true;
             $contactResult['errors'][] = 'Je bericht kon niet worden verzonden. Probeer later opnieuw of mail ons rechtstreeks.';

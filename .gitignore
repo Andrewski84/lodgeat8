@@ -9,6 +9,7 @@ UX_AUDIT_REPORT.md
 storage/contact-messages.json
 storage/contact-rate-limit.json
 storage/admin-login-attempts.json
+storage/password-reset-attempts.json
 storage/mail-settings.json
 storage/reset_tokens.json
 storage/admin.php

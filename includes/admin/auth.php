@@ -239,6 +239,133 @@ function admin_password_reset_request_message(): string
     return 'Als dit e-mailadres gekoppeld is aan beheer, sturen we een resetlink.';
 }
 
+function admin_password_reset_attempts_path(): string
+{
+    return storage_path('password-reset-attempts.json');
+}
+
+function admin_password_reset_attempt_scope(string $scope): string
+{
+    $scope = preg_replace('/[^a-z0-9_-]/', '', strtolower($scope)) ?? '';
+
+    return $scope === '' ? 'request' : $scope;
+}
+
+function admin_password_reset_attempt_keys(string $email, string $scope = 'request'): array
+{
+    $scope = admin_password_reset_attempt_scope($scope);
+    $keys = [$scope . ':ip:' . hash('sha256', admin_client_ip())];
+    $email = admin_normalized_username($email);
+
+    if ($email !== '') {
+        $keys[] = $scope . ':email:' . hash('sha256', $email . '|' . admin_client_ip());
+    }
+
+    return $keys;
+}
+
+function admin_read_password_reset_attempts(): array
+{
+    $path = admin_password_reset_attempts_path();
+
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $json = file_get_contents($path);
+    $data = json_decode((string) $json, true);
+
+    return is_array($data) ? $data : [];
+}
+
+function admin_write_password_reset_attempts(array $attempts): void
+{
+    app_write_json_runtime_file(
+        admin_password_reset_attempts_path(),
+        $attempts,
+        'De resetbeveiliging kon niet worden opgeslagen.'
+    );
+}
+
+function admin_password_reset_window_seconds(): int
+{
+    return 60 * 60;
+}
+
+function admin_password_reset_max_attempts(): int
+{
+    return 3;
+}
+
+function admin_prune_password_reset_attempts(array $attempts): array
+{
+    $minimum = time() - admin_password_reset_window_seconds();
+
+    foreach ($attempts as $key => $timestamps) {
+        $clean = [];
+
+        foreach ((array) $timestamps as $timestamp) {
+            $timestamp = (int) $timestamp;
+
+            if ($timestamp >= $minimum) {
+                $clean[] = $timestamp;
+            }
+        }
+
+        if ($clean === []) {
+            unset($attempts[$key]);
+        } else {
+            $attempts[$key] = $clean;
+        }
+    }
+
+    return $attempts;
+}
+
+function admin_password_reset_throttle_seconds(string $email, string $scope = 'request'): int
+{
+    $attempts = admin_prune_password_reset_attempts(admin_read_password_reset_attempts());
+    $now = time();
+    $waitSeconds = 0;
+
+    foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
+        $timestamps = array_map('intval', (array) ($attempts[$key] ?? []));
+
+        if (count($timestamps) < admin_password_reset_max_attempts()) {
+            continue;
+        }
+
+        $oldest = min($timestamps);
+        $waitSeconds = max($waitSeconds, admin_password_reset_window_seconds() - ($now - $oldest));
+    }
+
+    return max(0, $waitSeconds);
+}
+
+function admin_record_password_reset_attempt(string $email, string $scope = 'request'): void
+{
+    $attempts = admin_prune_password_reset_attempts(admin_read_password_reset_attempts());
+
+    foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
+        $timestamps = array_map('intval', (array) ($attempts[$key] ?? []));
+        $timestamps[] = time();
+        $attempts[$key] = array_slice($timestamps, -admin_password_reset_max_attempts());
+    }
+
+    admin_write_password_reset_attempts($attempts);
+}
+
+function admin_clear_password_reset_attempts(string $email, string $scope = 'request'): void
+{
+    $attempts = admin_prune_password_reset_attempts(admin_read_password_reset_attempts());
+
+    foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
+        unset($attempts[$key]);
+    }
+
+    admin_write_password_reset_attempts($attempts);
+}
+
 function admin_clean_mail_header(string $value): string
 {
     return trim(str_replace(["\r", "\n"], ' ', $value));

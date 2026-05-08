@@ -132,7 +132,7 @@ function admin_csrf_token(): string
 
 function admin_check_csrf(array $post): bool
 {
-    $token = $post['csrf_token'] ?? '';
+    $token = $post['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
 
     return is_string($token) && hash_equals(admin_csrf_token(), $token);
 }

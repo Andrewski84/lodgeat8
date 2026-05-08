@@ -8,14 +8,14 @@ function admin_append_deletion_message(array &$messages, array $deletionResult):
 
     if ($deletedImages !== []) {
         $messages[] = count($deletedImages) === 1
-            ? 'Foto definitief verwijderd.'
-            : count($deletedImages) . ' foto\'s definitief verwijderd.';
+            ? 'Foto verwijderd.'
+            : 'Foto\'s verwijderd.';
     }
 
     if ($failedImages !== []) {
         $messages[] = count($failedImages) === 1
-            ? 'De foto kon niet volledig verwijderd worden. Probeer opnieuw of contacteer je webbeheerder.'
-            : 'Enkele foto\'s konden niet volledig verwijderd worden. Probeer opnieuw of contacteer je webbeheerder.';
+            ? 'Foto niet verwijderd.'
+            : 'Foto\'s niet verwijderd.';
     }
 }
 
@@ -248,6 +248,7 @@ function admin_controller_state(array $config): array
                 }
             } elseif ($action === 'request-password-reset') {
                 $requestedResetEmail = trim((string) ($_POST['reset_email'] ?? ''));
+                $waitSeconds = admin_password_reset_throttle_seconds($requestedResetEmail, 'request');
 
                 // Keep the public response neutral so the login page does not
                 // reveal whether an e-mail address belongs to the admin account.
@@ -255,11 +256,15 @@ function admin_controller_state(array $config): array
                     $errors[] = 'De sessie is verlopen. Herlaad de pagina en probeer opnieuw.';
                 } elseif (!admin_login_email_is_valid($requestedResetEmail)) {
                     $errors[] = 'Vul een geldig e-mailadres in.';
+                } elseif ($waitSeconds > 0) {
+                    $errors[] = admin_wait_message($waitSeconds);
                 } elseif (!admin_is_configured()) {
                     $messages[] = admin_password_reset_request_message();
                 } elseif (!admin_request_password_reset_email($config, $requestedResetEmail)) {
+                    admin_record_password_reset_attempt($requestedResetEmail, 'request');
                     $errors[] = 'De resetmail kon niet worden verzonden. Controleer de mailinstellingen van de hosting.';
                 } else {
+                    admin_record_password_reset_attempt($requestedResetEmail, 'request');
                     $messages[] = admin_password_reset_request_message();
                     $requestedResetEmail = '';
                 }
@@ -267,19 +272,25 @@ function admin_controller_state(array $config): array
                 if (!admin_check_csrf($_POST)) {
                     $errors[] = 'De sessie is verlopen. Herlaad de pagina en probeer opnieuw.';
                 } else {
+                    $waitSeconds = admin_password_reset_throttle_seconds('', 'complete');
                     $token = admin_reset_token_from_query($_POST['reset_token'] ?? '');
                     $password = (string) ($_POST['password'] ?? '');
                     $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
 
-                    if ($token === '' || !admin_password_reset_token_exists($token)) {
+                    if ($waitSeconds > 0) {
+                        $errors[] = admin_wait_message($waitSeconds);
+                    } elseif ($token === '' || !admin_password_reset_token_exists($token)) {
+                        admin_record_password_reset_attempt('', 'complete');
                         $errors[] = 'De resetlink is ongeldig of verlopen.';
                     } elseif (strlen($password) < 10) {
                         $errors[] = 'Kies een wachtwoord van minstens 10 tekens.';
                     } elseif ($password !== $confirmPassword) {
                         $errors[] = 'De wachtwoorden komen niet overeen.';
                     } elseif (!admin_consume_password_reset_token($token, $password)) {
+                        admin_record_password_reset_attempt('', 'complete');
                         $errors[] = 'De resetlink kon niet worden gebruikt.';
                     } else {
+                        admin_clear_password_reset_attempts('', 'complete');
                         admin_login(admin_username(), $password);
                         $messages[] = 'Je wachtwoord is opnieuw ingesteld.';
                         $resetToken = '';
@@ -327,6 +338,7 @@ function admin_controller_state(array $config): array
                 $errors[] = 'Onbekende actie.';
             }
         } catch (Throwable $exception) {
+            app_log_exception($exception, 'admin-controller action ' . $action);
             $errors[] = $exception->getMessage();
         }
 
@@ -350,6 +362,16 @@ function admin_controller_state(array $config): array
     }
 
     if ($isAjaxRequest) {
+        if ($errors !== []) {
+            $joinedErrors = implode(' ', $errors);
+
+            if (!$loggedIn || str_contains($joinedErrors, 'Meld je eerst aan')) {
+                http_response_code(401);
+            } elseif (str_contains($joinedErrors, 'sessie')) {
+                http_response_code(403);
+            }
+        }
+
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => $errors === [],
@@ -374,6 +396,7 @@ function admin_controller_state(array $config): array
         'bookingWidget' => booking_widget_settings($config),
         'mailSettings' => app_mail_settings(),
         'mailPasswordSet' => app_mail_password_is_set(),
+        'sessionTimeoutSeconds' => admin_session_timeout_seconds(),
         'siteLogo' => admin_safe_media_filename((string) ($config['site']['logo'] ?? '')),
         'siteFavicon' => admin_safe_media_filename((string) ($config['site']['favicon'] ?? '')),
         'passwordReset' => [

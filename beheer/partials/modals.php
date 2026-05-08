@@ -11,6 +11,19 @@
     </section>
 </div>
 
+<div class="photo-resize-modal" data-photo-resize-modal hidden>
+    <div class="photo-resize-modal-backdrop" data-photo-resize-no></div>
+    <section class="photo-resize-modal-panel" role="dialog" aria-modal="true" aria-labelledby="photo-resize-modal-title">
+        <h2 id="photo-resize-modal-title">Grote JPG-foto's</h2>
+        <p data-photo-resize-summary></p>
+        <p data-photo-resize-detail></p>
+        <div class="photo-resize-modal-actions">
+            <button type="button" data-photo-resize-yes>Verkleinen</button>
+            <button type="button" class="secondary-button" data-photo-resize-no>Origineel uploaden</button>
+        </div>
+    </section>
+</div>
+
 <div class="link-modal" data-link-modal hidden>
     <div class="link-modal-backdrop" data-link-modal-close></div>
     <section class="link-modal-panel" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">

@@ -1,50 +1,50 @@
 [
     {
-        "file": "home/bgstr-raam.jpg",
-        "title": "bgstr-raam"
+        "file": "backgrounds/crw-6837.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "kamer-1"
+        ],
+        "display": "cover-center"
     },
     {
-        "file": "home/bgstr-gevel1.jpg",
-        "title": "bgstr-gevel1"
+        "file": "backgrounds/crw-6831.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center"
     },
     {
-        "file": "kamer-2/bgstr-room2.jpg",
-        "title": "bgstr-room2"
+        "file": "backgrounds/crw-7158.jpg",
+        "title": "",
+        "pages": [
+            "kamer-1"
+        ],
+        "display": "cover-center"
     },
     {
-        "file": "kamer-1/room1-12.jpg",
-        "title": "room1-12"
-    },
-    {
-        "file": "home/bgstr-breakfast2.jpg",
-        "title": "bgstr-breakfast2"
-    },
-    {
-        "file": "kamer-2/bgstr-room2-2.jpg",
-        "title": "bgstr-room2-2"
-    },
-    {
-        "file": "leuven/bgstr-brochureleuven.jpg",
-        "title": "bgstr-brochureleuven"
-    },
-    {
-        "file": "home/bgstr-breakfast.jpg",
-        "title": "bgstr-breakfast"
-    },
-    {
-        "file": "kamer-2/bgstr-room2door.jpg",
-        "title": "bgstr-room2door"
-    },
-    {
-        "file": "leuven/bgstr-brochures.jpg",
-        "title": "bgstr-brochures"
-    },
-    {
-        "file": "home/bgstr-ontbijtgranen.jpg",
-        "title": "bgstr-ontbijtgranen"
-    },
-    {
-        "file": "home/bgstr-pickwick.jpg",
-        "title": "bgstr-pickwick"
+        "file": "backgrounds/crw-7155.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center"
     }
 ]

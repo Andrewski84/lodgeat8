@@ -4,6 +4,9 @@ const photoHideTimers = new WeakMap();
 const activePhotoManagers = new Set();
 const saveFeedbackVisibleMs = 3000;
 const photoUploadTimeoutMs = 180000;
+const photoResizeThresholdBytes = 4 * 1024 * 1024;
+const photoResizeMaxDimension = 2560;
+const photoResizeQuality = 0.95;
 
 // Shared dirty-state handling. Any editable admin form can reveal its save bar
 // and trigger the unsaved-changes modal before admin navigation, refresh keys
@@ -14,11 +17,26 @@ let pendingNavigationHandler = null;
 let isSubmittingForm = false;
 const dirtyForms = new Set();
 let lastDirtyForm = null;
+const adminSessionTimeoutMs = Math.max(0, Number.parseInt(document.body?.dataset?.adminSessionTimeout || '0', 10) || 0) * 1000;
+let adminSessionLastRefreshAt = Date.now();
+let adminSessionWarningShown = false;
+let adminSessionExpiredShown = false;
+
+const refreshAdminSessionTimer = () => {
+    adminSessionLastRefreshAt = Date.now();
+    adminSessionWarningShown = false;
+    adminSessionExpiredShown = false;
+};
 
 const unsavedModal = document.querySelector('[data-unsaved-modal]');
 const unsavedSaveButton = unsavedModal?.querySelector('[data-unsaved-save]');
 const unsavedStayButton = unsavedModal?.querySelector('button[data-unsaved-stay]');
 const unsavedLeaveButton = unsavedModal?.querySelector('[data-unsaved-leave]');
+const photoResizeModal = document.querySelector('[data-photo-resize-modal]');
+const photoResizeSummary = photoResizeModal?.querySelector('[data-photo-resize-summary]');
+const photoResizeDetail = photoResizeModal?.querySelector('[data-photo-resize-detail]');
+const photoResizeYesButton = photoResizeModal?.querySelector('[data-photo-resize-yes]');
+let photoResizeModalResolve = null;
 
 const formFromSource = (source) => {
     if (!source) {
@@ -178,8 +196,14 @@ const removePhotoManagerFields = (formData, manager) => {
         return;
     }
 
-    [`${fieldName}[file][]`, `${fieldName}[title][]`, `${fieldName}[remove][]`]
+    [`${fieldName}[file][]`, `${fieldName}[key][]`, `${fieldName}[title][]`, `${fieldName}[remove][]`]
         .forEach((name) => formData.delete(name));
+
+    Array.from(formData.keys()).forEach((name) => {
+        if (name.startsWith(`${fieldName}[pages][`) || name.startsWith(`${fieldName}[display][`)) {
+            formData.delete(name);
+        }
+    });
 };
 
 const photoUploadLimit = (manager) => {
@@ -223,18 +247,196 @@ const validatePhotoFiles = (manager, files) => {
     return false;
 };
 
-const photoMessageHasDeleteDetails = (message) => (
-    message.includes('Foto definitief verwijderd')
-    || message.includes('foto\'s definitief verwijderd')
-    || message.includes('Verwijderd uit assets')
-    || message.includes('stond al niet meer in assets/img')
-    || message.includes('stonden al niet meer in assets/img')
+const photoCanResizeJpeg = () => {
+    const canvas = document.createElement('canvas');
+
+    return typeof canvas.toBlob === 'function';
+};
+
+const photoFileIsJpeg = (file) => (
+    file.type === 'image/jpeg'
+    || /\.jpe?g$/i.test(file.name || '')
 );
+
+const photoResizeCandidates = (files) => files.filter((file) => (
+    photoFileIsJpeg(file)
+    && file.size >= photoResizeThresholdBytes
+));
+
+const loadPhotoImage = (file) => new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(image);
+    };
+
+    image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Afbeelding kon niet worden gelezen.'));
+    };
+
+    image.src = url;
+});
+
+const canvasToJpegBlob = (canvas) => new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', photoResizeQuality);
+});
+
+const resizedPhotoFile = async (file) => {
+    const image = await loadPhotoImage(file);
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    const longestSide = Math.max(width, height);
+
+    if (!width || !height) {
+        return file;
+    }
+
+    const scale = longestSide > photoResizeMaxDimension ? photoResizeMaxDimension / longestSide : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+
+    const context = canvas.getContext('2d', { alpha: false });
+
+    if (!context) {
+        return file;
+    }
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await canvasToJpegBlob(canvas);
+
+    if (!blob || blob.size >= file.size) {
+        return file;
+    }
+
+    try {
+        return new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: file.lastModified,
+        });
+    } catch (_error) {
+        blob.name = file.name;
+        blob.lastModified = file.lastModified;
+
+        return blob;
+    }
+};
+
+const photoResizeConfirmText = (candidates) => {
+    const totalSize = candidates.reduce((sum, file) => sum + file.size, 0);
+    const photoLabel = candidates.length === 1 ? '1 grote JPG' : `${candidates.length} grote JPG's`;
+
+    return {
+        detail: `We bewaren hoge kwaliteit en beperken grote foto's tot max. ${photoResizeMaxDimension}px.`,
+        message: `${photoLabel} boven ${formatBytes(photoResizeThresholdBytes)} gevonden (${formatBytes(totalSize)} totaal).\n\nWil je verkleinen voor sneller uploaden?`,
+        summary: `${photoLabel} boven ${formatBytes(photoResizeThresholdBytes)} gevonden (${formatBytes(totalSize)} totaal).`,
+    };
+};
+
+const closePhotoResizeModal = (shouldResize) => {
+    if (!photoResizeModal) {
+        return;
+    }
+
+    photoResizeModal.hidden = true;
+    document.body.classList.remove('has-photo-resize-modal');
+
+    if (photoResizeModalResolve) {
+        photoResizeModalResolve(shouldResize);
+        photoResizeModalResolve = null;
+    }
+};
+
+const confirmPhotoResize = (candidates) => {
+    if (candidates.length === 0) {
+        return Promise.resolve(false);
+    }
+
+    const text = photoResizeConfirmText(candidates);
+
+    if (!photoResizeModal || !photoResizeYesButton) {
+        return Promise.resolve(window.confirm(text.message + '\n' + text.detail));
+    }
+
+    if (photoResizeSummary) {
+        photoResizeSummary.textContent = text.summary;
+    }
+
+    if (photoResizeDetail) {
+        photoResizeDetail.textContent = text.detail;
+    }
+
+    photoResizeModal.hidden = false;
+    document.body.classList.add('has-photo-resize-modal');
+    photoResizeYesButton.focus();
+
+    return new Promise((resolve) => {
+        photoResizeModalResolve = resolve;
+    });
+};
+
+const preparePhotoFilesForUpload = async (manager, files) => {
+    const candidates = photoCanResizeJpeg() ? photoResizeCandidates(files) : [];
+
+    if (!await confirmPhotoResize(candidates)) {
+        return files;
+    }
+
+    setPhotoStatus(manager, candidates.length === 1 ? 'Foto verkleinen...' : 'Foto\'s verkleinen...', 'busy', null);
+
+    const candidateSet = new Set(candidates);
+    const preparedFiles = [];
+
+    for (const file of files) {
+        if (!candidateSet.has(file)) {
+            preparedFiles.push(file);
+            continue;
+        }
+
+        try {
+            preparedFiles.push(await resizedPhotoFile(file));
+        } catch (_error) {
+            preparedFiles.push(file);
+        }
+    }
+
+    return preparedFiles;
+};
+
+const photoMessageIsDeleteFailure = (message) => {
+    const normalized = message.toLowerCase();
+
+    return normalized.includes('foto') && normalized.includes('niet verwijderd');
+};
+
+const photoMessageHasDeleteDetails = (message) => {
+    const normalized = message.toLowerCase();
+
+    if (photoMessageIsDeleteFailure(message)) {
+        return false;
+    }
+
+    return (
+        (normalized.includes('foto') && normalized.includes('verwijderd'))
+        || normalized.includes('verwijderd uit assets')
+        || normalized.includes('stond al niet meer in assets/img')
+        || normalized.includes('stonden al niet meer in assets/img')
+    );
+};
 
 const photoMessageIsTechnicalMediaDetail = (message) => (
     photoMessageHasDeleteDetails(message)
     || message.includes('assets/img')
     || message.includes('bestandsrechten')
+);
+
+const photoMessageIsSaveConfirmation = (message) => (
+    /^(Kamer|Pagina) is bewaard\.$/.test(message)
+    || message === 'Algemene instellingen zijn bewaard.'
 );
 
 const photoRequestErrorMessage = (xhr, response) => {
@@ -277,18 +479,29 @@ const photoSuccessMessage = (response, fallback, isUpload = false) => {
         return fallback;
     }
 
+    const hasFailedPhotoDelete = messages.some(photoMessageIsDeleteFailure);
+
+    if (hasFailedPhotoDelete) {
+        const hasMultipleFailedDeletes = messages.some((message) => (
+            message.toLowerCase().includes('foto\'s niet verwijderd')
+        ));
+
+        return hasMultipleFailedDeletes ? 'Foto\'s niet verwijderd.' : 'Foto niet verwijderd.';
+    }
+
     const hasDeletedPhoto = messages.some(photoMessageHasDeleteDetails);
 
     if (hasDeletedPhoto) {
-        const saveMessage = messages.find((message) => (
-            /^(Kamer|Pagina) is bewaard\.$/.test(message)
-            || message === 'Algemene instellingen zijn bewaard.'
+        const hasMultipleDeletedPhotos = messages.some((message) => (
+            message.toLowerCase().includes('foto\'s verwijderd')
         ));
-        return [saveMessage, 'Foto definitief verwijderd.'].filter(Boolean).join(' ');
+
+        return hasMultipleDeletedPhotos ? 'Foto\'s verwijderd.' : 'Foto verwijderd.';
     }
 
     const visibleMessages = messages.filter((message) => (
         !photoMessageIsTechnicalMediaDetail(message)
+        && !photoMessageIsSaveConfirmation(message)
         && !message.includes('server')
     ));
 
@@ -296,7 +509,7 @@ const photoSuccessMessage = (response, fallback, isUpload = false) => {
         return visibleMessages.join(' ');
     }
 
-    return isUpload ? 'Upload opgeslagen. Foto\'s laden...' : fallback;
+    return isUpload ? 'Foto\'s opgeslagen.' : fallback;
 };
 
 const adminAjaxUrl = (form) => {
@@ -316,6 +529,13 @@ const adminAjaxUrl = (form) => {
     }
 };
 
+const adminCsrfToken = (form = null) => {
+    const formToken = form?.querySelector?.('input[name="csrf_token"]')?.value || '';
+    const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    return formToken || metaToken;
+};
+
 const hidePhotoStatus = (manager) => {
     const autosave = manager?.querySelector('[data-photo-autosave]');
 
@@ -325,9 +545,10 @@ const hidePhotoStatus = (manager) => {
 
     window.clearTimeout(photoHideTimers.get(manager));
     autosave.hidden = true;
+    syncAdminToastOffset();
 };
 
-const setPhotoStatus = (manager, message, state = 'busy', progress = null) => {
+const setPhotoStatus = (manager, message, state = 'busy', progress = null, showProgress = false) => {
     const autosave = manager?.querySelector('[data-photo-autosave]');
     const status = manager?.querySelector('[data-photo-status]');
     const progressTrack = manager?.querySelector('[data-photo-progress-track]');
@@ -342,6 +563,9 @@ const setPhotoStatus = (manager, message, state = 'busy', progress = null) => {
     autosave.hidden = false;
     autosave.classList.toggle('is-error', state === 'error');
     status.textContent = message;
+    const progressLine = progressTrack.closest('.photo-progress-line');
+
+    progressLine?.toggleAttribute('hidden', !showProgress);
     progressTrack.classList.toggle('is-indeterminate', progress === null && state === 'busy');
 
     const normalizedProgress = typeof progress === 'number' ? Math.max(0, Math.min(100, progress)) : null;
@@ -358,6 +582,8 @@ const setPhotoStatus = (manager, message, state = 'busy', progress = null) => {
     } else {
         progressValue.textContent = '';
     }
+
+    syncAdminToastOffset();
 
     if (state === 'success') {
         const timer = window.setTimeout(() => {
@@ -475,7 +701,18 @@ unsavedLeaveButton?.addEventListener('click', () => {
     }
 });
 
+photoResizeYesButton?.addEventListener('click', () => closePhotoResizeModal(true));
+
+photoResizeModal?.querySelectorAll('[data-photo-resize-no]').forEach((element) => {
+    element.addEventListener('click', () => closePhotoResizeModal(false));
+});
+
 document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && photoResizeModal && !photoResizeModal.hidden) {
+        closePhotoResizeModal(false);
+        return;
+    }
+
     if (event.key === 'Escape' && unsavedModal && !unsavedModal.hidden) {
         pendingNavigationUrl = '';
         pendingNavigationHandler = null;
@@ -533,15 +770,49 @@ if (window.history && typeof window.history.pushState === 'function') {
 }
 
 // Toasts are used for regular form saves; photo uploads use the same duration
-// but keep their own progress state. The visible toast height is exposed to CSS
-// so the unsaved save bar can share the same bottom-right lane without overlap.
+// but keep their own progress state. All visible toasts share one bottom-right
+// stack so messages never overlap.
 const adminToasts = Array.from(document.querySelectorAll('[data-admin-toast]'));
+let adminToastSequence = 0;
+const adminToastOrder = new WeakMap();
+const adminToastGap = () => {
+    const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--admin-toast-gap'));
+
+    return Number.isFinite(value) && value >= 0 ? value : 12;
+};
+
+const adminToastElements = () => Array.from(new Set([
+    ...adminToasts,
+    ...document.querySelectorAll('[data-photo-autosave]'),
+]));
+
 const syncAdminToastOffset = () => {
-    const visibleToasts = adminToasts.filter((toast) => !toast.hidden);
-    const maxToastHeight = visibleToasts.reduce((height, toast) => (
-        Math.max(height, toast.getBoundingClientRect().height)
-    ), 0);
-    const offset = maxToastHeight > 0 ? maxToastHeight + 12 : 0;
+    const visibleToasts = [];
+
+    adminToastElements().forEach((toast) => {
+        if (!toast.isConnected || toast.hidden) {
+            adminToastOrder.delete(toast);
+            toast.style.removeProperty('--admin-toast-stack-offset');
+            return;
+        }
+
+        if (!adminToastOrder.has(toast)) {
+            adminToastSequence += 1;
+            adminToastOrder.set(toast, adminToastSequence);
+        }
+
+        visibleToasts.push(toast);
+    });
+
+    visibleToasts.sort((a, b) => (adminToastOrder.get(a) || 0) - (adminToastOrder.get(b) || 0));
+
+    let offset = 0;
+    const gap = adminToastGap();
+
+    visibleToasts.forEach((toast) => {
+        toast.style.setProperty('--admin-toast-stack-offset', `${offset}px`);
+        offset += toast.getBoundingClientRect().height + gap;
+    });
 
     document.documentElement.style.setProperty('--admin-toast-offset', `${offset}px`);
 };
@@ -608,6 +879,80 @@ adminToasts.forEach((toast) => {
 
 syncAdminToastOffset();
 window.addEventListener('resize', syncAdminToastOffset);
+
+const showAdminNotice = (message, state = 'success', autoHide = false) => {
+    const stack = document.createElement('div');
+    const item = document.createElement('div');
+    const text = document.createElement('span');
+    const close = document.createElement('button');
+
+    stack.className = `message-stack is-toast${state === 'error' ? ' is-error' : ''}`;
+    stack.setAttribute('data-admin-toast', '');
+    item.className = `message is-${state === 'error' ? 'error' : 'success'}`;
+    close.type = 'button';
+    close.className = 'message-close';
+    close.setAttribute('aria-label', 'Melding sluiten');
+    close.textContent = '\u00d7';
+    text.textContent = message;
+    item.append(text, close);
+    stack.append(item);
+    document.body.append(stack);
+    adminToasts.push(stack);
+    syncAdminToastOffset();
+
+    const hide = () => {
+        stack.hidden = true;
+        stack.remove();
+        const index = adminToasts.indexOf(stack);
+
+        if (index !== -1) {
+            adminToasts.splice(index, 1);
+        }
+
+        syncAdminToastOffset();
+    };
+
+    close.addEventListener('click', hide);
+
+    if (autoHide) {
+        window.setTimeout(hide, saveFeedbackVisibleMs);
+    }
+
+    return stack;
+};
+
+if (adminSessionTimeoutMs > 0) {
+    const sessionWarningLeadMs = Math.min(5 * 60 * 1000, Math.max(60 * 1000, Math.floor(adminSessionTimeoutMs / 4)));
+
+    window.setInterval(() => {
+        const remainingMs = adminSessionTimeoutMs - (Date.now() - adminSessionLastRefreshAt);
+
+        if (remainingMs <= 0) {
+            if (!adminSessionExpiredShown) {
+                adminSessionExpiredShown = true;
+                showAdminNotice(
+                    hasUnsavedChanges
+                        ? 'Je beheersessie is waarschijnlijk verlopen. Meld opnieuw aan in een nieuw tabblad voordat je verder werkt.'
+                        : 'Je beheersessie is waarschijnlijk verlopen. Meld opnieuw aan om verder te werken.',
+                    'error'
+                );
+            }
+
+            return;
+        }
+
+        if (remainingMs <= sessionWarningLeadMs && !adminSessionWarningShown) {
+            adminSessionWarningShown = true;
+            const minutes = Math.max(1, Math.ceil(remainingMs / 60000));
+            showAdminNotice(`Je beheersessie verloopt over ongeveer ${minutes} minuten. Bewaar je wijzigingen tijdig.`, 'error');
+        }
+    }, 30000);
+}
+
+document.querySelectorAll('[data-select-on-focus]').forEach((input) => {
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('click', () => input.select());
+});
 
 // Rich-text editor with a strict HTML subset and explicit toolbar commands.
 const escapeHtml = (value) => value
@@ -1469,7 +1814,11 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
     const reloadAfterSuccess = options.reloadAfterSuccess === true;
     const uploadFiles = Array.isArray(options.files) ? options.files : [];
     const uploadName = options.uploadName || '';
-    const statusMessage = options.statusMessage || (isUpload ? 'Foto\'s uploaden...' : 'Foto\'s automatisch bewaren...');
+    const statusMessage = options.statusMessage || (isUpload ? 'Foto\'s uploaden...' : 'Foto\'s opslaan...');
+    const showBusyStatus = options.showBusyStatus !== false;
+    const showProgress = Object.prototype.hasOwnProperty.call(options, 'showProgress')
+        ? options.showProgress !== false
+        : isUpload;
     const progressStart = typeof options.progressStart === 'number' ? Math.max(0, Math.min(100, options.progressStart)) : 0;
     const progressEnd = typeof options.progressEnd === 'number' ? Math.max(0, Math.min(100, options.progressEnd)) : 100;
     const progressRange = Math.max(0, progressEnd - progressStart);
@@ -1485,14 +1834,17 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
 
     photoRequests.set(manager, xhr);
     setPhotoSaveActive(manager, true);
-    setPhotoStatus(manager, statusMessage, 'busy', isUpload ? progressStart : null);
+
+    if (showBusyStatus) {
+        setPhotoStatus(manager, statusMessage, 'busy', isUpload ? progressStart : null, showProgress);
+    }
 
     xhr.upload.addEventListener('progress', (event) => {
         if (!isUpload || !event.lengthComputable) {
             return;
         }
 
-        setPhotoStatus(manager, statusMessage, 'busy', progressStart + ((event.loaded / event.total) * progressRange));
+        setPhotoStatus(manager, statusMessage, 'busy', progressStart + ((event.loaded / event.total) * progressRange), showProgress);
     });
 
     xhr.upload.addEventListener('load', () => {
@@ -1500,7 +1852,7 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
             return;
         }
 
-        setPhotoStatus(manager, statusMessage.replace('uploaden', 'verwerken'), 'busy', progressEnd);
+        setPhotoStatus(manager, statusMessage.replace('uploaden', 'verwerken'), 'busy', progressEnd, showProgress);
     });
 
     xhr.addEventListener('load', () => {
@@ -1522,14 +1874,16 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
         }
 
         if (xhr.status >= 200 && xhr.status < 300 && response.success !== false) {
+            refreshAdminSessionTimer();
+
             const successMessage = photoSuccessMessage(
                 response,
-                isUpload ? 'Upload opgeslagen. Foto\'s laden...' : 'Automatisch opgeslagen.',
+                options.successMessage || 'Foto\'s opgeslagen.',
                 isUpload
             );
 
             if (options.deferSuccessStatus !== true) {
-                setPhotoStatus(manager, successMessage, 'success', 100);
+                setPhotoStatus(manager, successMessage, 'success', 100, showProgress);
             }
 
             clearUnsavedChanges(form);
@@ -1544,7 +1898,7 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
 
         const errorMessage = photoRequestErrorMessage(xhr, response);
 
-        setPhotoStatus(manager, errorMessage, 'error', 100);
+        setPhotoStatus(manager, errorMessage, 'error', 100, showProgress);
         resolve({ success: false, response, error: errorMessage, status: xhr.status });
     });
 
@@ -1555,7 +1909,7 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
         }
 
         const errorMessage = photoRequestErrorMessage(xhr, {});
-        setPhotoStatus(manager, errorMessage, 'error', 100);
+        setPhotoStatus(manager, errorMessage, 'error', 100, showProgress);
         resolve({ success: false, error: errorMessage, status: xhr.status });
     });
 
@@ -1566,7 +1920,7 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
         }
 
         const errorMessage = 'De server reageert te traag op de upload. Probeer opnieuw met minder of kleinere foto\'s.';
-        setPhotoStatus(manager, errorMessage, 'error', 100);
+        setPhotoStatus(manager, errorMessage, 'error', 100, showProgress);
         resolve({ success: false, error: errorMessage, timeout: true });
     });
 
@@ -1578,6 +1932,7 @@ const autoSavePhotoManager = (manager, options = {}) => new Promise((resolve) =>
     xhr.open((form.method || 'POST').toUpperCase(), adminAjaxUrl(form), true);
     xhr.timeout = options.timeoutMs || photoUploadTimeoutMs;
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.setRequestHeader('X-CSRF-Token', adminCsrfToken(form));
     xhr.send(formData);
 });
 
@@ -1585,6 +1940,12 @@ const uploadPhotoFiles = async (manager, files, uploadName) => {
     const form = manager?.closest('form');
 
     if (!manager || !form || !files.length) {
+        return;
+    }
+
+    files = await preparePhotoFilesForUpload(manager, files);
+
+    if (!validatePhotoFiles(manager, files)) {
         return;
     }
 
@@ -1620,8 +1981,8 @@ const uploadPhotoFiles = async (manager, files, uploadName) => {
     }
 
     const message = files.length === 1
-        ? 'Upload opgeslagen. Foto\'s laden...'
-        : `${files.length} foto\'s opgeslagen. Foto\'s laden...`;
+        ? 'Foto opgeslagen.'
+        : 'Foto\'s opgeslagen.';
 
     setPhotoStatus(manager, message, 'success', 100);
     clearUnsavedChanges(form);
@@ -1634,6 +1995,7 @@ const schedulePhotoAutosave = (manager, options = {}) => {
     }
 
     window.clearTimeout(photoSaveTimers.get(manager));
+    setPhotoSaveActive(manager, true);
 
     const timer = window.setTimeout(() => {
         autoSavePhotoManager(manager, options);
@@ -1645,6 +2007,39 @@ const schedulePhotoAutosave = (manager, options = {}) => {
 const photoOrderSignature = (grid) => Array.from(grid.querySelectorAll('[data-photo-card]:not(.is-marked-delete) input[name$="[file][]"]'))
     .map((input) => input.value)
     .join('|');
+
+const backgroundPageCheckboxes = (card) => Array.from(card?.querySelectorAll('[data-background-page]') || []);
+
+const syncBackgroundAllCheckbox = (card) => {
+    const all = card?.querySelector('[data-background-all]');
+    const pages = backgroundPageCheckboxes(card);
+
+    if (!all || pages.length === 0) {
+        return;
+    }
+
+    const checkedCount = pages.filter((input) => input.checked).length;
+    all.checked = checkedCount === pages.length;
+    all.indeterminate = checkedCount > 0 && checkedCount < pages.length;
+};
+
+const setBackgroundPageCheckboxes = (card, checked) => {
+    backgroundPageCheckboxes(card).forEach((input) => {
+        input.checked = checked;
+    });
+
+    syncBackgroundAllCheckbox(card);
+};
+
+const syncBackgroundMenuLayer = (menu) => {
+    menu?.closest('[data-photo-card]')?.classList.toggle('has-open-background-menu', menu.open);
+};
+
+const backgroundMenuAutosaveOptions = {
+    showBusyStatus: false,
+    showProgress: false,
+    successMessage: 'Opgeslagen.',
+};
 
 document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
     let draggedCard = null;
@@ -1684,7 +2079,8 @@ document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
     grid.addEventListener('dragstart', (event) => {
         const card = event.target.closest('[data-photo-card]');
 
-        if (!card) {
+        if (!card || event.target.closest('[data-background-menu]')) {
+            event.preventDefault();
             return;
         }
 
@@ -1722,6 +2118,10 @@ document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
 
     grid.addEventListener('click', (event) => {
         const card = event.target.closest('[data-photo-card]');
+
+        if (event.target.closest('[data-background-menu]')) {
+            event.stopPropagation();
+        }
 
         if (event.target.closest('[data-photo-up]')) {
             if (moveCard(card, 'up')) {
@@ -1775,10 +2175,38 @@ document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
     });
 
     grid.addEventListener('change', (event) => {
+        const card = event.target.closest('[data-photo-card]');
+
+        if (event.target.matches('[data-background-all]')) {
+            setBackgroundPageCheckboxes(card, event.target.checked);
+            markUnsavedChanges(event.target);
+            schedulePhotoAutosave(manager, backgroundMenuAutosaveOptions);
+            return;
+        }
+
+        if (event.target.matches('[data-background-page]')) {
+            syncBackgroundAllCheckbox(card);
+            markUnsavedChanges(event.target);
+            schedulePhotoAutosave(manager, backgroundMenuAutosaveOptions);
+            return;
+        }
+
+        if (event.target.matches('[data-background-display]')) {
+            markUnsavedChanges(event.target);
+            schedulePhotoAutosave(manager, backgroundMenuAutosaveOptions);
+            return;
+        }
+
         if (event.target.matches('input[name$="[title][]"]')) {
             markUnsavedChanges(event.target);
             schedulePhotoAutosave(manager);
         }
+    });
+
+    grid.querySelectorAll('[data-photo-card]').forEach(syncBackgroundAllCheckbox);
+    grid.querySelectorAll('[data-background-menu]').forEach((menu) => {
+        syncBackgroundMenuLayer(menu);
+        menu.addEventListener('toggle', () => syncBackgroundMenuLayer(menu));
     });
 });
 
@@ -1839,13 +2267,12 @@ document.querySelectorAll('[data-photo-drop-zone]').forEach((dropZone) => {
     dropZone.addEventListener('drop', (event) => {
         event.preventDefault();
 
-        const files = Array.from(event.dataTransfer?.files || []).filter((file) => file.type.startsWith('image/'));
+        const files = Array.from(event.dataTransfer?.files || []).filter((file) => (
+            file.type.startsWith('image/')
+            || /\.(jpe?g|png|gif|webp)$/i.test(file.name || '')
+        ));
 
         if (!files.length) {
-            return;
-        }
-
-        if (!validatePhotoFiles(manager, files)) {
             return;
         }
 
@@ -1859,10 +2286,6 @@ document.querySelectorAll('[data-photo-drop-zone]').forEach((dropZone) => {
         updateLabel(files.length);
 
         if (files.length) {
-            if (!validatePhotoFiles(manager, files)) {
-                return;
-            }
-
             markUnsavedChanges(input);
             uploadPhotoFiles(manager, files, input.name);
         }

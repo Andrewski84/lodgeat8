@@ -23,10 +23,6 @@
         {
             "file": "kamer-1/crw-7067.jpg",
             "title": "Room 1 – 6"
-        },
-        {
-            "file": "home/breakfast1.jpg",
-            "title": "Ontbijt 1"
         }
     ],
     "leuven": [
@@ -109,10 +105,6 @@
             "title": ""
         },
         {
-            "file": "kamer-1/room1-12.jpg",
-            "title": ""
-        },
-        {
             "file": "kamer-1/crw-7026.jpg",
             "title": ""
         },
@@ -131,16 +123,8 @@
     ],
     "kamer-2": [
         {
-            "file": "kamer-2/bgstr-room2.jpg",
-            "title": "Kamer 2"
-        },
-        {
-            "file": "kamer-2/bgstr-room2-2.jpg",
-            "title": "Kamer 2 detail"
-        },
-        {
-            "file": "kamer-2/bgstr-room2door.jpg",
-            "title": "bgstr-room2door"
+            "file": "kamer-2/crw-7025.jpg",
+            "title": ""
         },
         {
             "file": "kamer-2/crw-6998.jpg",

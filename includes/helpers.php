@@ -93,6 +93,119 @@ function gallery_items_for_display(array $gallery): array
     return $items;
 }
 
+function background_display_options(): array
+{
+    return [
+        'cover-center' => [
+            'label' => 'Cropped midden',
+            'size' => 'cover',
+            'position' => 'center center',
+            'repeat' => 'no-repeat',
+        ],
+        'cover-top' => [
+            'label' => 'Cropped boven',
+            'size' => 'cover',
+            'position' => 'center top',
+            'repeat' => 'no-repeat',
+        ],
+        'cover-bottom' => [
+            'label' => 'Cropped beneden',
+            'size' => 'cover',
+            'position' => 'center bottom',
+            'repeat' => 'no-repeat',
+        ],
+        'cover-left' => [
+            'label' => 'Cropped links',
+            'size' => 'cover',
+            'position' => 'left center',
+            'repeat' => 'no-repeat',
+        ],
+        'cover-right' => [
+            'label' => 'Cropped rechts',
+            'size' => 'cover',
+            'position' => 'right center',
+            'repeat' => 'no-repeat',
+        ],
+        'contain-center' => [
+            'label' => 'Volledig beeld',
+            'size' => 'contain',
+            'position' => 'center center',
+            'repeat' => 'no-repeat',
+        ],
+    ];
+}
+
+function background_display_mode(string $mode): string
+{
+    return array_key_exists($mode, background_display_options()) ? $mode : 'cover-center';
+}
+
+function background_item_pages($item): ?array
+{
+    if (!is_array($item) || !array_key_exists('pages', $item)) {
+        return null;
+    }
+
+    if (!is_array($item['pages'])) {
+        return [];
+    }
+
+    $pages = [];
+
+    foreach ($item['pages'] as $page) {
+        $page = preg_replace('/[^a-z0-9-]/', '', strtolower((string) $page)) ?? '';
+
+        if ($page !== '') {
+            $pages[$page] = true;
+        }
+    }
+
+    return array_keys($pages);
+}
+
+function background_item_is_enabled_for_page($item, string $pageKey): bool
+{
+    $pages = background_item_pages($item);
+
+    return $pages === null || in_array($pageKey, $pages, true);
+}
+
+function background_items_for_display(array $backgrounds, string $pageKey): array
+{
+    $items = [];
+
+    foreach ($backgrounds as $item) {
+        if (!background_item_is_enabled_for_page($item, $pageKey)) {
+            continue;
+        }
+
+        $file = is_array($item) ? (string) ($item['file'] ?? '') : (string) $item;
+        $file = ltrim(str_replace('\\', '/', $file), '/');
+
+        if ($file === '' || preg_match('#(^|/)\.\.(/|$)#', $file) === 1) {
+            continue;
+        }
+
+        if (!is_file(base_path('assets/img/' . $file))) {
+            continue;
+        }
+
+        $mode = is_array($item) ? background_display_mode((string) ($item['display'] ?? '')) : background_display_mode('');
+        $display = background_display_options()[$mode];
+
+        $items[] = [
+            'file' => $file,
+            'alt' => is_array($item) ? (string) ($item['title'] ?? $item['alt'] ?? '') : '',
+            'display' => $mode,
+            'size' => $display['size'],
+            'position' => $display['position'],
+            'repeat' => $display['repeat'],
+        ];
+    }
+
+    return $items;
+}
+
 function ui_text(string $key, ?string $language = null): string
 {
     if ($language === null) {

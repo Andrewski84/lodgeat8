@@ -77,6 +77,74 @@ function admin_lines_from_value($value): array
     return $clean;
 }
 
+function admin_sanitize_plain_text(string $value): string
+{
+    $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $value = strip_tags($value);
+    $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+    return trim($value);
+}
+
+function admin_sanitize_plain_lines($value): array
+{
+    $lines = is_array($value) ? $value : admin_lines_from_text((string) $value);
+    $clean = [];
+
+    foreach ($lines as $line) {
+        $line = admin_sanitize_plain_text((string) $line);
+
+        if ($line !== '') {
+            $clean[] = $line;
+        }
+    }
+
+    return $clean;
+}
+
+function admin_sanitize_rich_text(string $html): string
+{
+    $html = trim($html);
+
+    if ($html === '') {
+        return '';
+    }
+
+    return trim(rich_text_html($html));
+}
+
+function admin_sanitize_rich_text_lines(string $text): array
+{
+    $lines = preg_split('/\R/', $text) ?: [];
+    $clean = [];
+
+    foreach ($lines as $line) {
+        $line = admin_sanitize_rich_text((string) $line);
+
+        if ($line !== '') {
+            $clean[] = $line;
+        }
+    }
+
+    return $clean;
+}
+
+function admin_sanitize_rich_text_pairs(array $pairs): array
+{
+    $clean = [];
+
+    foreach ($pairs as $label => $value) {
+        $label = admin_sanitize_rich_text((string) $label);
+        $value = admin_sanitize_rich_text((string) $value);
+
+        if ($label !== '' && $value !== '') {
+            $clean[$label] = $value;
+        }
+    }
+
+    return $clean;
+}
+
 function admin_text_from_lines(array $lines): string
 {
     return implode(PHP_EOL, array_map('strval', $lines));
@@ -186,6 +254,235 @@ function admin_normalize_media_items(array $items): array
     }
 
     return $normalized;
+}
+
+function admin_background_page_options(): array
+{
+    $sections = admin_sections();
+    $skip = [
+        'algemeen' => true,
+        'toegang' => true,
+    ];
+    $pages = [];
+
+    foreach ($sections as $key => $label) {
+        if (isset($skip[$key])) {
+            continue;
+        }
+
+        $pages[$key] = $label;
+    }
+
+    return $pages;
+}
+
+function admin_background_upload_directory(): string
+{
+    // General background uploads are separate from the home carousel photos.
+    return 'backgrounds';
+}
+
+function admin_background_file_for_storage(string $file): string
+{
+    $file = admin_safe_media_filename($file);
+
+    if ($file === '' || strpos($file, admin_background_upload_directory() . '/') === 0) {
+        return $file;
+    }
+
+    $mediaRoot = realpath(base_path('assets/img'));
+
+    if ($mediaRoot === false) {
+        return $file;
+    }
+
+    $source = $mediaRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $file);
+
+    if (!is_file($source)) {
+        return $file;
+    }
+
+    $targetDirectory = $mediaRoot . DIRECTORY_SEPARATOR . admin_background_upload_directory();
+
+    if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0775, true) && !is_dir($targetDirectory)) {
+        throw new RuntimeException('De background map kon niet worden aangemaakt.');
+    }
+
+    if (!is_writable($targetDirectory)) {
+        throw new RuntimeException('De background map is niet schrijfbaar. Controleer de rechten van assets/img/backgrounds.');
+    }
+
+    $fileName = basename($file);
+    $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+    $baseName = pathinfo($fileName, PATHINFO_FILENAME);
+    $target = $targetDirectory . DIRECTORY_SEPARATOR . $fileName;
+    $counter = 2;
+
+    while (is_file($target)) {
+        if (@sha1_file($source) === @sha1_file($target)) {
+            return admin_background_upload_directory() . '/' . basename($target);
+        }
+
+        $fileName = $baseName . '-' . $counter . '.' . $extension;
+        $target = $targetDirectory . DIRECTORY_SEPARATOR . $fileName;
+        $counter++;
+    }
+
+    if (!copy($source, $target)) {
+        throw new RuntimeException('De background foto kon niet naar assets/img/backgrounds worden gekopieerd.');
+    }
+
+    return admin_background_upload_directory() . '/' . basename($target);
+}
+
+function admin_background_display_mode(string $mode): string
+{
+    return background_display_mode($mode);
+}
+
+function admin_clean_background_pages($pages): array
+{
+    if (!is_array($pages)) {
+        return [];
+    }
+
+    $validPages = array_fill_keys(array_keys(admin_background_page_options()), true);
+    $clean = [];
+
+    foreach ($pages as $page) {
+        $page = preg_replace('/[^a-z0-9-]/', '', strtolower((string) $page)) ?? '';
+
+        if ($page !== '' && isset($validPages[$page])) {
+            $clean[$page] = true;
+        }
+    }
+
+    return array_keys($clean);
+}
+
+function admin_default_background_pages(): array
+{
+    return array_keys(admin_background_page_options());
+}
+
+function admin_media_form_key(string $file): string
+{
+    $file = admin_safe_media_filename($file);
+
+    return $file === '' ? '' : sha1($file);
+}
+
+function admin_background_item_from_media_item(array $item, ?array $pages = null, string $display = ''): array
+{
+    $file = admin_safe_media_filename((string) ($item['file'] ?? ''));
+
+    return [
+        'file' => $file,
+        'title' => trim((string) ($item['title'] ?? '')),
+        'pages' => $pages ?? admin_default_background_pages(),
+        'display' => admin_background_display_mode($display),
+    ];
+}
+
+function admin_normalize_background_item($item): array
+{
+    $mediaItem = admin_normalize_media_item($item);
+
+    if ($mediaItem['file'] === '') {
+        return admin_background_item_from_media_item($mediaItem);
+    }
+
+    if (!is_array($item)) {
+        return admin_background_item_from_media_item($mediaItem);
+    }
+
+    $pages = array_key_exists('pages', $item)
+        ? admin_clean_background_pages($item['pages'])
+        : admin_default_background_pages();
+
+    return admin_background_item_from_media_item($mediaItem, $pages, (string) ($item['display'] ?? ''));
+}
+
+function admin_normalize_background_items(array $items): array
+{
+    $normalized = [];
+
+    foreach ($items as $item) {
+        $item = admin_normalize_background_item($item);
+
+        if ($item['file'] !== '') {
+            $normalized[] = $item;
+        }
+    }
+
+    return $normalized;
+}
+
+function admin_backgrounds_from_post(array $post, array $uploaded = []): array
+{
+    $files = $post['file'] ?? [];
+    $keys = $post['key'] ?? [];
+    $titles = $post['title'] ?? [];
+    $pagesByKey = is_array($post['pages'] ?? null) ? $post['pages'] : [];
+    $displayByKey = is_array($post['display'] ?? null) ? $post['display'] : [];
+    $remove = [];
+    $items = [];
+
+    foreach (($post['remove'] ?? []) as $file) {
+        $file = admin_safe_media_filename((string) $file);
+
+        if ($file !== '') {
+            $remove[$file] = true;
+        }
+    }
+
+    foreach ($files as $index => $file) {
+        $file = admin_safe_media_filename((string) $file);
+
+        if ($file === '' || isset($remove[$file])) {
+            continue;
+        }
+
+        $key = (string) ($keys[$index] ?? admin_media_form_key($file));
+        $expectedKey = admin_media_form_key($file);
+        $storedFile = admin_background_file_for_storage($file);
+
+        if ($key === '' || !hash_equals($expectedKey, $key)) {
+            $key = $expectedKey;
+        }
+
+        $items[] = admin_background_item_from_media_item(
+            [
+                'file' => $storedFile,
+                'title' => trim((string) ($titles[$index] ?? '')),
+            ],
+            array_key_exists($key, $pagesByKey) ? admin_clean_background_pages($pagesByKey[$key]) : admin_default_background_pages(),
+            (string) ($displayByKey[$key] ?? '')
+        );
+    }
+
+    foreach ($uploaded as $file) {
+        $items[] = admin_background_item_from_media_item([
+            'file' => $file,
+            'title' => '',
+        ]);
+    }
+
+    return $items;
+}
+
+function admin_append_uploaded_backgrounds(array $items, array $uploaded): array
+{
+    $items = admin_normalize_background_items($items);
+
+    foreach ($uploaded as $file) {
+        $items[] = admin_background_item_from_media_item([
+            'file' => $file,
+            'title' => '',
+        ]);
+    }
+
+    return $items;
 }
 
 function admin_media_from_post(array $post, array $uploaded = []): array

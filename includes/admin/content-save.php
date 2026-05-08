@@ -104,14 +104,14 @@ function admin_save_general(array $content, array $post, array $files = []): arr
         $content['site']['favicon'] = admin_safe_media_filename((string) $post['site']['favicon']);
     }
 
-    $backgroundUploads = admin_upload_images($files['background_uploads'] ?? [], admin_media_directory('backgrounds'));
+    $backgroundUploads = admin_upload_images($files['background_uploads'] ?? [], admin_background_upload_directory());
     $backgroundPost = (array) ($post['backgrounds'] ?? []);
     $removedBackgrounds = admin_removed_media_from_post($backgroundPost);
 
     if (isset($post['backgrounds']) && admin_media_post_has_files($backgroundPost)) {
-        $content['backgrounds'] = admin_media_from_post($backgroundPost, $backgroundUploads);
+        $content['backgrounds'] = admin_backgrounds_from_post($backgroundPost, $backgroundUploads);
     } elseif ($backgroundUploads !== []) {
-        $content['backgrounds'] = admin_append_uploaded_media($content['backgrounds'] ?? [], $backgroundUploads);
+        $content['backgrounds'] = admin_append_uploaded_backgrounds($content['backgrounds'] ?? [], $backgroundUploads);
     }
 
     if ($removedBackgrounds !== []) {
@@ -141,14 +141,14 @@ function admin_save_page_content(array $content, string $pageKey, array $post, a
 
     foreach (supported_languages() as $language => $label) {
         $languagePost = $post['translations'][$language] ?? [];
-        admin_set_translation($content['pages'][$pageKey], $language, 'title', trim((string) ($languagePost['title'] ?? '')));
+        admin_set_translation($content['pages'][$pageKey], $language, 'title', admin_sanitize_plain_text((string) ($languagePost['title'] ?? '')));
 
         if (isset($languagePost['intro'])) {
-            admin_set_translation($content['pages'][$pageKey], $language, 'intro', admin_lines_from_text((string) $languagePost['intro']));
+            admin_set_translation($content['pages'][$pageKey], $language, 'intro', admin_sanitize_rich_text_lines((string) $languagePost['intro']));
         }
 
         if (isset($languagePost['success_message'])) {
-            admin_set_translation($content['pages'][$pageKey], $language, 'success_message', trim((string) ($languagePost['success_message'] ?? '')));
+            admin_set_translation($content['pages'][$pageKey], $language, 'success_message', admin_sanitize_rich_text((string) ($languagePost['success_message'] ?? '')));
         }
     }
 
@@ -193,14 +193,14 @@ function admin_save_room_content(array $content, string $roomKey, array $post, a
 
     foreach (supported_languages() as $language => $label) {
         $languagePost = $post['translations'][$language] ?? [];
-        $title = trim((string) ($languagePost['title'] ?? ''));
-        $navTitle = trim((string) ($languagePost['nav_title'] ?? ''));
-        $summary = trim((string) ($languagePost['summary'] ?? ''));
+        $title = admin_sanitize_plain_text((string) ($languagePost['title'] ?? ''));
+        $navTitle = admin_sanitize_plain_text((string) ($languagePost['nav_title'] ?? ''));
+        $summary = admin_sanitize_rich_text((string) ($languagePost['summary'] ?? ''));
         $bookingUrl = trim((string) ($languagePost['booking_url'] ?? ''));
-        $features = admin_lines_from_value($languagePost['features'] ?? []);
-        $pricesHeading = trim((string) ($languagePost['prices_heading'] ?? ''));
-        $prices = admin_pairs_from_value($languagePost['prices'] ?? []);
-        $extraInfo = admin_lines_from_text((string) ($languagePost['extra_info'] ?? ''));
+        $features = admin_sanitize_plain_lines($languagePost['features'] ?? []);
+        $pricesHeading = admin_sanitize_rich_text((string) ($languagePost['prices_heading'] ?? ''));
+        $prices = admin_sanitize_rich_text_pairs(admin_pairs_from_value($languagePost['prices'] ?? []));
+        $extraInfo = admin_sanitize_rich_text_lines((string) ($languagePost['extra_info'] ?? ''));
 
         admin_validate_optional_url($bookingUrl, 'Booking link');
 
@@ -253,7 +253,7 @@ function admin_save_links_content(array $content, array $post): array
 
     foreach (supported_languages() as $language => $label) {
         $languagePost = $post['translations'][$language] ?? [];
-        admin_set_translation($content['pages']['links'], $language, 'title', trim((string) ($languagePost['title'] ?? '')));
+        admin_set_translation($content['pages']['links'], $language, 'title', admin_sanitize_plain_text((string) ($languagePost['title'] ?? '')));
         $columns = isset($languagePost['sections']) && is_array($languagePost['sections'])
             ? admin_columns_from_link_sections($languagePost['sections'])
             : admin_columns_from_link_rows($languagePost['links'] ?? []);

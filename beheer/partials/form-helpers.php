@@ -280,7 +280,10 @@ function beheer_links_fields(array $page): void
 
 function beheer_photo_grid(string $fieldName, array $items, string $uploadName, string $title, string $help): void
 {
-    $items = admin_normalize_media_items($items);
+    $isBackgroundManager = $fieldName === 'backgrounds';
+    $items = $isBackgroundManager ? admin_normalize_background_items($items) : admin_normalize_media_items($items);
+    $backgroundPages = $isBackgroundManager ? admin_background_page_options() : [];
+    $backgroundDisplayOptions = $isBackgroundManager ? background_display_options() : [];
     ?>
     <section
         class="photo-manager"
@@ -308,15 +311,64 @@ function beheer_photo_grid(string $fieldName, array $items, string $uploadName, 
         </div>
         <div class="photo-grid" data-photo-grid>
             <?php foreach ($items as $item): ?>
+                <?php
+                $backgroundKey = $isBackgroundManager ? admin_media_form_key((string) $item['file']) : '';
+                $selectedBackgroundPages = $isBackgroundManager
+                    ? admin_clean_background_pages($item['pages'] ?? admin_default_background_pages())
+                    : [];
+                $selectedBackgroundPagesLookup = array_fill_keys($selectedBackgroundPages, true);
+                $allBackgroundPagesSelected = $isBackgroundManager
+                    && $backgroundPages !== []
+                    && count($selectedBackgroundPagesLookup) === count($backgroundPages);
+                $backgroundDisplay = $isBackgroundManager ? admin_background_display_mode((string) ($item['display'] ?? '')) : '';
+                ?>
                 <article class="photo-card" draggable="true" data-photo-card>
                     <div class="photo-thumb">
                         <img src="<?= e('../' . image_path($item['file'])) ?>" alt="">
                     </div>
                     <input type="hidden" name="<?= e($fieldName) ?>[file][]" value="<?= e($item['file']) ?>">
+                    <?php if ($isBackgroundManager): ?>
+                        <input type="hidden" name="<?= e($fieldName) ?>[key][]" value="<?= e($backgroundKey) ?>">
+                    <?php endif; ?>
                     <label>
                         Titel / alt tekst
                         <input name="<?= e($fieldName) ?>[title][]" value="<?= e($item['title']) ?>">
                     </label>
+                    <?php if ($isBackgroundManager): ?>
+                        <details class="background-photo-menu" data-background-menu>
+                            <summary>Pagina's en weergave</summary>
+                            <div class="background-photo-panel">
+                                <label class="background-page-toggle">
+                                    <input type="checkbox" data-background-all<?= $allBackgroundPagesSelected ? ' checked' : '' ?>>
+                                    <span>Alle pagina's</span>
+                                </label>
+                                <div class="background-page-list">
+                                    <?php foreach ($backgroundPages as $pageKey => $pageLabel): ?>
+                                        <label class="background-page-option">
+                                            <input
+                                                type="checkbox"
+                                                name="<?= e($fieldName) ?>[pages][<?= e($backgroundKey) ?>][]"
+                                                value="<?= e($pageKey) ?>"
+                                                data-background-page
+                                                <?= isset($selectedBackgroundPagesLookup[$pageKey]) ? ' checked' : '' ?>
+                                            >
+                                            <span><?= e($pageLabel) ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                                <label class="background-display-field">
+                                    Weergave
+                                    <select name="<?= e($fieldName) ?>[display][<?= e($backgroundKey) ?>]" data-background-display>
+                                        <?php foreach ($backgroundDisplayOptions as $mode => $displayOption): ?>
+                                            <option value="<?= e($mode) ?>"<?= $mode === $backgroundDisplay ? ' selected' : '' ?>>
+                                                <?= e($displayOption['label']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                            </div>
+                        </details>
+                    <?php endif; ?>
                     <div class="photo-card-actions">
                         <button type="button" class="icon-button" data-photo-up aria-label="Foto omhoog">&uarr;</button>
                         <button type="button" class="icon-button" data-photo-down aria-label="Foto omlaag">&darr;</button>

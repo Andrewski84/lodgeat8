@@ -227,6 +227,7 @@ function app_send_email_with_phpmailer(array $settings, string $to, string $subj
 
         return $mail->send();
     } catch (Throwable $exception) {
+        app_log_exception($exception, 'phpmailer send');
         return false;
     }
 }

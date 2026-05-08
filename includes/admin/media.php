@@ -322,6 +322,27 @@ function admin_upload_limit_message(int $contentLength = 0): string
     return $message . '. Upload minder foto\'s tegelijk of verklein de bestanden.';
 }
 
+function admin_safe_media_directory(string $directory): string
+{
+    $directory = trim(str_replace('\\', '/', $directory), '/');
+
+    if ($directory === '') {
+        return '';
+    }
+
+    $segments = array_values(array_filter(explode('/', $directory), static function (string $segment): bool {
+        return $segment !== '';
+    }));
+
+    foreach ($segments as $segment) {
+        if (preg_match('/^[a-z0-9][a-z0-9-]*$/', $segment) !== 1) {
+            throw new RuntimeException('De uploadmap is ongeldig.');
+        }
+    }
+
+    return implode('/', $segments);
+}
+
 function admin_upload_images(array $files, string $directory = ''): array
 {
     if (($files['name'] ?? []) === []) {
@@ -331,13 +352,38 @@ function admin_upload_images(array $files, string $directory = ''): array
     $names = is_array($files['name']) ? $files['name'] : [$files['name']];
     $temporaryNames = is_array($files['tmp_name']) ? $files['tmp_name'] : [$files['tmp_name']];
     $errors = is_array($files['error']) ? $files['error'] : [$files['error']];
+    $sizes = is_array($files['size'] ?? null) ? $files['size'] : [$files['size'] ?? 0];
     $uploaded = [];
-    $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-    $relativeDirectory = trim(str_replace('\\', '/', $directory), '/');
-    $targetDirectory = base_path('assets/img' . ($relativeDirectory === '' ? '' : '/' . $relativeDirectory));
+    $allowedMimeTypes = [
+        'jpg' => ['image/jpeg'],
+        'jpeg' => ['image/jpeg'],
+        'png' => ['image/png'],
+        'gif' => ['image/gif'],
+        'webp' => ['image/webp'],
+    ];
+    $relativeDirectory = admin_safe_media_directory($directory);
+    $mediaRoot = realpath(base_path('assets/img'));
+
+    if ($mediaRoot === false) {
+        throw new RuntimeException('De afbeeldingenmap ontbreekt.');
+    }
+
+    $mediaRootPrefix = rtrim($mediaRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    $targetDirectory = $mediaRoot . ($relativeDirectory === '' ? '' : DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativeDirectory));
 
     if (!is_dir($targetDirectory) && !mkdir($targetDirectory, 0775, true) && !is_dir($targetDirectory)) {
         throw new RuntimeException('De afbeeldingenmap kon niet worden aangemaakt.');
+    }
+
+    $resolvedTargetDirectory = realpath($targetDirectory);
+    $targetInsideMedia = $resolvedTargetDirectory !== false && (
+        DIRECTORY_SEPARATOR === '\\'
+            ? strncasecmp($resolvedTargetDirectory . DIRECTORY_SEPARATOR, $mediaRootPrefix, strlen($mediaRootPrefix)) === 0 || strcasecmp($resolvedTargetDirectory, $mediaRoot) === 0
+            : strncmp($resolvedTargetDirectory . DIRECTORY_SEPARATOR, $mediaRootPrefix, strlen($mediaRootPrefix)) === 0 || strcmp($resolvedTargetDirectory, $mediaRoot) === 0
+    );
+
+    if (!$targetInsideMedia) {
+        throw new RuntimeException('De uploadmap valt buiten assets/img.');
     }
 
     if (!is_writable($targetDirectory)) {
@@ -363,15 +409,29 @@ function admin_upload_images(array $files, string $directory = ''): array
         }
 
         $temporaryName = (string) ($temporaryNames[$index] ?? '');
+        $fileSize = (int) ($sizes[$index] ?? 0);
+        $fileLimit = admin_effective_upload_limit_bytes();
 
-        if (!is_uploaded_file($temporaryName) || @getimagesize($temporaryName) === false) {
+        if ($fileLimit > 0 && $fileSize > $fileLimit) {
+            throw new RuntimeException(admin_upload_limit_message($fileSize));
+        }
+
+        $imageInfo = @getimagesize($temporaryName);
+
+        if (!is_uploaded_file($temporaryName) || $imageInfo === false) {
             throw new RuntimeException('Upload alleen geldige afbeeldingsbestanden.');
         }
 
         $extension = strtolower(pathinfo((string) $originalName, PATHINFO_EXTENSION));
 
-        if (!in_array($extension, $allowedExtensions, true)) {
+        if (!array_key_exists($extension, $allowedMimeTypes)) {
             throw new RuntimeException('Alleen jpg, png, gif en webp zijn toegestaan.');
+        }
+
+        $mimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
+
+        if (!in_array($mimeType, $allowedMimeTypes[$extension], true)) {
+            throw new RuntimeException('De bestandsextensie komt niet overeen met het afbeeldingsformaat.');
         }
 
         $baseName = strtolower(pathinfo((string) $originalName, PATHINFO_FILENAME));

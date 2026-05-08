@@ -26,7 +26,7 @@
         <?php if (($passwordReset['generatedLink'] ?? '') !== ''): ?>
             <label class="wide">
                 Nieuwe resetlink
-                <input value="<?= e((string) $passwordReset['generatedLink']) ?>" readonly onclick="this.select()">
+                <input value="<?= e((string) $passwordReset['generatedLink']) ?>" readonly data-select-on-focus>
             </label>
         <?php endif; ?>
         <div class="form-actions"><button type="submit">Resetlink genereren</button></div>

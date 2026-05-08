@@ -19,6 +19,7 @@ $requestedResetEmail = $adminState['requestedResetEmail'];
 $bookingWidget = $adminState['bookingWidget'];
 $mailSettings = $adminState['mailSettings'];
 $mailPasswordSet = $adminState['mailPasswordSet'];
+$sessionTimeoutSeconds = $adminState['sessionTimeoutSeconds'];
 $siteLogo = $adminState['siteLogo'];
 $siteFavicon = $adminState['siteFavicon'];
 $passwordReset = $adminState['passwordReset'];
@@ -28,11 +29,12 @@ $passwordReset = $adminState['passwordReset'];
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?= e($csrfToken) ?>">
     <title>Beheer | <?= e($config['site']['name']) ?></title>
     <link rel="stylesheet" href="../assets/css/admin.css">
     <script src="../assets/js/admin.js" defer></script>
 </head>
-<body class="admin-body">
+<body class="admin-body" data-admin-session-timeout="<?= e($loggedIn ? (string) $sessionTimeoutSeconds : '0') ?>">
     <?php if (!$configured): ?>
         <main class="admin-auth">
             <section class="auth-panel">

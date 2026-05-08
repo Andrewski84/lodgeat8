@@ -34,6 +34,5 @@ $bookingCtaLabel = 'Book Now';
 <?php elseif (is_safe_web_url($bookingFallback)): ?>
     <a class="book-now" href="<?= e($bookingFallback) ?>" target="_blank" rel="noopener">
         <span class="book-now-text"><?= e($bookingCtaLabel) ?></span>
-        <span class="book-now-icon" aria-hidden="true"></span>
     </a>
 <?php endif; ?>
