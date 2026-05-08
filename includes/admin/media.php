@@ -343,6 +343,129 @@ function admin_safe_media_directory(string $directory): string
     return implode('/', $segments);
 }
 
+function admin_image_compression_threshold_bytes(): int
+{
+    return 1024 * 1024;
+}
+
+function admin_image_compression_max_dimension(): int
+{
+    return 1920;
+}
+
+function admin_can_compress_jpeg(): bool
+{
+    foreach (['imagecreatefromjpeg', 'imagecreatetruecolor', 'imagecolorallocate', 'imagecopyresampled', 'imagefill', 'imagejpeg', 'imagedestroy'] as $function) {
+        if (!function_exists($function)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function admin_compress_large_jpeg(string $path): void
+{
+    $originalSize = @filesize($path);
+
+    if ($originalSize === false || $originalSize < admin_image_compression_threshold_bytes() || !admin_can_compress_jpeg()) {
+        return;
+    }
+
+    $imageInfo = @getimagesize($path);
+
+    if ($imageInfo === false || strtolower((string) ($imageInfo['mime'] ?? '')) !== 'image/jpeg') {
+        return;
+    }
+
+    $width = (int) ($imageInfo[0] ?? 0);
+    $height = (int) ($imageInfo[1] ?? 0);
+
+    if ($width <= 0 || $height <= 0) {
+        return;
+    }
+
+    $source = @imagecreatefromjpeg($path);
+
+    if ($source === false) {
+        return;
+    }
+
+    $longestSide = max($width, $height);
+    $maxDimension = admin_image_compression_max_dimension();
+    $scale = $longestSide > $maxDimension ? $maxDimension / $longestSide : 1.0;
+    $targetWidth = max(1, (int) round($width * $scale));
+    $targetHeight = max(1, (int) round($height * $scale));
+    $canvas = $source;
+
+    if ($targetWidth !== $width || $targetHeight !== $height) {
+        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+
+        if ($canvas === false) {
+            imagedestroy($source);
+            return;
+        }
+
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+
+        if ($white !== false) {
+            imagefill($canvas, 0, 0, $white);
+        }
+
+        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+    }
+
+    $bestTemp = null;
+    $bestSize = PHP_INT_MAX;
+
+    foreach ([84, 78, 72, 66] as $quality) {
+        $temp = tempnam(dirname($path), 'jpg-compress-');
+
+        if ($temp === false) {
+            continue;
+        }
+
+        if (!@imagejpeg($canvas, $temp, $quality)) {
+            @unlink($temp);
+            continue;
+        }
+
+        $size = @filesize($temp);
+
+        if ($size !== false && $size < $bestSize) {
+            if ($bestTemp !== null) {
+                @unlink($bestTemp);
+            }
+
+            $bestTemp = $temp;
+            $bestSize = $size;
+        } else {
+            @unlink($temp);
+        }
+
+        if ($size !== false && $size <= admin_image_compression_threshold_bytes()) {
+            break;
+        }
+    }
+
+    if ($canvas !== $source) {
+        imagedestroy($canvas);
+    }
+
+    imagedestroy($source);
+
+    if ($bestTemp === null) {
+        return;
+    }
+
+    if ($bestSize < $originalSize) {
+        @copy($bestTemp, $path);
+        clearstatcache(true, $path);
+    }
+
+    @unlink($bestTemp);
+}
+
 function admin_upload_images(array $files, string $directory = ''): array
 {
     if (($files['name'] ?? []) === []) {
@@ -449,6 +572,10 @@ function admin_upload_images(array $files, string $directory = ''): array
 
         if (!move_uploaded_file($temporaryName, $target)) {
             throw new RuntimeException('De afbeelding kon niet worden opgeslagen.');
+        }
+
+        if (in_array($extension, ['jpg', 'jpeg'], true)) {
+            admin_compress_large_jpeg($target);
         }
 
         $uploaded[] = $relativeDirectory === '' ? $fileName : $relativeDirectory . '/' . $fileName;

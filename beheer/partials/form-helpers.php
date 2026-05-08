@@ -321,6 +321,8 @@ function beheer_photo_grid(string $fieldName, array $items, string $uploadName, 
                     && $backgroundPages !== []
                     && count($selectedBackgroundPagesLookup) === count($backgroundPages);
                 $backgroundDisplay = $isBackgroundManager ? admin_background_display_mode((string) ($item['display'] ?? '')) : '';
+                $backgroundFocusX = $isBackgroundManager ? admin_background_focus_value($item['focus_x'] ?? 50) : 50;
+                $backgroundFocusY = $isBackgroundManager ? admin_background_focus_value($item['focus_y'] ?? 50) : 50;
                 ?>
                 <article class="photo-card" draggable="true" data-photo-card>
                     <div class="photo-thumb">
@@ -358,14 +360,25 @@ function beheer_photo_grid(string $fieldName, array $items, string $uploadName, 
                                 </div>
                                 <label class="background-display-field">
                                     Weergave
-                                    <select name="<?= e($fieldName) ?>[display][<?= e($backgroundKey) ?>]" data-background-display>
+                                    <select
+                                        name="<?= e($fieldName) ?>[display][<?= e($backgroundKey) ?>]"
+                                        data-background-display
+                                        data-background-focus-image="<?= e('../' . image_path($item['file'])) ?>"
+                                    >
                                         <?php foreach ($backgroundDisplayOptions as $mode => $displayOption): ?>
-                                            <option value="<?= e($mode) ?>"<?= $mode === $backgroundDisplay ? ' selected' : '' ?>>
+                                            <option
+                                                value="<?= e($mode) ?>"
+                                                data-background-size="<?= e((string) $displayOption['size']) ?>"
+                                                data-background-position="<?= e((string) $displayOption['position']) ?>"
+                                                <?= $mode === $backgroundDisplay ? ' selected' : '' ?>
+                                            >
                                                 <?= e($displayOption['label']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
                                 </label>
+                                <input type="hidden" name="<?= e($fieldName) ?>[focus_x][<?= e($backgroundKey) ?>]" value="<?= e((string) $backgroundFocusX) ?>" data-background-focus-x>
+                                <input type="hidden" name="<?= e($fieldName) ?>[focus_y][<?= e($backgroundKey) ?>]" value="<?= e((string) $backgroundFocusY) ?>" data-background-focus-y>
                             </div>
                         </details>
                     <?php endif; ?>

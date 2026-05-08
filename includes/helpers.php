@@ -126,6 +126,12 @@ function background_display_options(): array
             'position' => 'right center',
             'repeat' => 'no-repeat',
         ],
+        'cover-focus' => [
+            'label' => 'Aangepast focuspunt',
+            'size' => 'cover',
+            'position' => 'center center',
+            'repeat' => 'no-repeat',
+        ],
         'contain-center' => [
             'label' => 'Volledig beeld',
             'size' => 'contain',
@@ -138,6 +144,24 @@ function background_display_options(): array
 function background_display_mode(string $mode): string
 {
     return array_key_exists($mode, background_display_options()) ? $mode : 'cover-center';
+}
+
+function background_focus_value($value, float $fallback = 50.0): float
+{
+    if (!is_numeric($value)) {
+        return $fallback;
+    }
+
+    return max(0.0, min(100.0, (float) $value));
+}
+
+function background_focus_position($x, $y): string
+{
+    $x = round(background_focus_value($x), 2);
+    $y = round(background_focus_value($y), 2);
+
+    return rtrim(rtrim(number_format($x, 2, '.', ''), '0'), '.') . '% '
+        . rtrim(rtrim(number_format($y, 2, '.', ''), '0'), '.') . '%';
 }
 
 function background_item_pages($item): ?array
@@ -192,13 +216,16 @@ function background_items_for_display(array $backgrounds, string $pageKey): arra
 
         $mode = is_array($item) ? background_display_mode((string) ($item['display'] ?? '')) : background_display_mode('');
         $display = background_display_options()[$mode];
+        $position = $mode === 'cover-focus' && is_array($item)
+            ? background_focus_position($item['focus_x'] ?? 50, $item['focus_y'] ?? 50)
+            : $display['position'];
 
         $items[] = [
             'file' => $file,
             'alt' => is_array($item) ? (string) ($item['title'] ?? $item['alt'] ?? '') : '',
             'display' => $mode,
             'size' => $display['size'],
-            'position' => $display['position'],
+            'position' => $position,
             'repeat' => $display['repeat'],
         ];
     }

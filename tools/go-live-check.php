@@ -162,6 +162,12 @@ if ($effectiveUploadLimit > 0 && $effectiveUploadLimit < 2 * 1024 * 1024) {
     $add($warnings, 'Effectieve uploadlimiet is laag (' . admin_format_bytes($effectiveUploadLimit) . '). Grote foto\'s zullen mislukken.');
 }
 
+if (admin_can_compress_jpeg()) {
+    $add($ok, 'Server-side JPG-compressie is beschikbaar.');
+} else {
+    $add($warnings, 'PHP GD ontbreekt; JPG-compressie gebeurt dan alleen in de browser tijdens beheeruploads.');
+}
+
 foreach ([
     'index.php',
     '.htaccess',

@@ -24,6 +24,35 @@
     </section>
 </div>
 
+<div class="background-focus-modal" data-background-focus-modal hidden>
+    <div class="background-focus-modal-backdrop" data-background-focus-close></div>
+    <section class="background-focus-modal-panel" role="dialog" aria-modal="true" aria-labelledby="background-focus-modal-title">
+        <div class="background-focus-modal-head">
+            <div>
+                <h2 id="background-focus-modal-title">Focuspunt kiezen</h2>
+                <p>Klik op het deel van de foto dat belangrijk moet blijven bij cropped weergave.</p>
+            </div>
+            <button type="button" class="icon-button" data-background-focus-close aria-label="Sluiten">&times;</button>
+        </div>
+        <div class="background-focus-modal-body">
+            <button type="button" class="background-focus-modal-picker" data-background-focus-modal-picker aria-label="Focuspunt plaatsen">
+                <img src="" alt="" data-background-focus-modal-image>
+                <span class="background-focus-marker" aria-hidden="true"></span>
+            </button>
+            <div
+                class="background-focus-preview background-focus-modal-preview"
+                data-background-focus-modal-preview
+            >
+                <span>Voorbeeld op site</span>
+            </div>
+        </div>
+        <div class="background-focus-modal-actions">
+            <output data-background-focus-modal-value>50% / 50%</output>
+            <button type="button" data-background-focus-close>Klaar</button>
+        </div>
+    </section>
+</div>
+
 <div class="link-modal" data-link-modal hidden>
     <div class="link-modal-backdrop" data-link-modal-close></div>
     <section class="link-modal-panel" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">

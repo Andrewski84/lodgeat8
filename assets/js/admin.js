@@ -4,9 +4,11 @@ const photoHideTimers = new WeakMap();
 const activePhotoManagers = new Set();
 const saveFeedbackVisibleMs = 3000;
 const photoUploadTimeoutMs = 180000;
-const photoResizeThresholdBytes = 4 * 1024 * 1024;
-const photoResizeMaxDimension = 2560;
-const photoResizeQuality = 0.95;
+const photoResizeThresholdBytes = 1024 * 1024;
+const photoResizeTargetBytes = photoResizeThresholdBytes;
+const photoResizeMaxDimension = 1920;
+const photoResizeMinDimension = 1280;
+const photoResizeQualities = [0.84, 0.78, 0.72, 0.66];
 
 // Shared dirty-state handling. Any editable admin form can reveal its save bar
 // and trigger the unsaved-changes modal before admin navigation, refresh keys
@@ -37,6 +39,13 @@ const photoResizeSummary = photoResizeModal?.querySelector('[data-photo-resize-s
 const photoResizeDetail = photoResizeModal?.querySelector('[data-photo-resize-detail]');
 const photoResizeYesButton = photoResizeModal?.querySelector('[data-photo-resize-yes]');
 let photoResizeModalResolve = null;
+const backgroundFocusModal = document.querySelector('[data-background-focus-modal]');
+const backgroundFocusModalPicker = backgroundFocusModal?.querySelector('[data-background-focus-modal-picker]');
+const backgroundFocusModalImage = backgroundFocusModal?.querySelector('[data-background-focus-modal-image]');
+const backgroundFocusModalPreview = backgroundFocusModal?.querySelector('[data-background-focus-modal-preview]');
+const backgroundFocusModalValue = backgroundFocusModal?.querySelector('[data-background-focus-modal-value]');
+let activeBackgroundFocusCard = null;
+let activeBackgroundFocusManager = null;
 
 const formFromSource = (source) => {
     if (!source) {
@@ -196,11 +205,23 @@ const removePhotoManagerFields = (formData, manager) => {
         return;
     }
 
-    [`${fieldName}[file][]`, `${fieldName}[key][]`, `${fieldName}[title][]`, `${fieldName}[remove][]`]
+    [
+        `${fieldName}[file][]`,
+        `${fieldName}[key][]`,
+        `${fieldName}[title][]`,
+        `${fieldName}[focus_x][]`,
+        `${fieldName}[focus_y][]`,
+        `${fieldName}[remove][]`,
+    ]
         .forEach((name) => formData.delete(name));
 
     Array.from(formData.keys()).forEach((name) => {
-        if (name.startsWith(`${fieldName}[pages][`) || name.startsWith(`${fieldName}[display][`)) {
+        if (
+            name.startsWith(`${fieldName}[pages][`)
+            || name.startsWith(`${fieldName}[display][`)
+            || name.startsWith(`${fieldName}[focus_x][`)
+            || name.startsWith(`${fieldName}[focus_y][`)
+        ) {
             formData.delete(name);
         }
     });
@@ -280,9 +301,60 @@ const loadPhotoImage = (file) => new Promise((resolve, reject) => {
     image.src = url;
 });
 
-const canvasToJpegBlob = (canvas) => new Promise((resolve) => {
-    canvas.toBlob(resolve, 'image/jpeg', photoResizeQuality);
+const canvasToJpegBlob = (canvas, quality) => new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', quality);
 });
+
+const photoResizeTargetDimensions = (longestSide) => {
+    const dimensions = [
+        Math.min(longestSide, photoResizeMaxDimension),
+        1600,
+        photoResizeMinDimension,
+    ];
+
+    return dimensions
+        .filter((dimension) => dimension > 0 && dimension <= longestSide)
+        .filter((dimension, index, all) => all.indexOf(dimension) === index);
+};
+
+const drawPhotoToCanvas = (image, width, height, targetLongestSide) => {
+    const scale = Math.min(1, targetLongestSide / Math.max(width, height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+
+    const context = canvas.getContext('2d', { alpha: false });
+
+    if (!context) {
+        return null;
+    }
+
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return canvas;
+};
+
+const compressedPhotoBlob = async (canvas) => {
+    let bestBlob = null;
+
+    for (const quality of photoResizeQualities) {
+        const blob = await canvasToJpegBlob(canvas, quality);
+
+        if (!blob) {
+            continue;
+        }
+
+        if (!bestBlob || blob.size < bestBlob.size) {
+            bestBlob = blob;
+        }
+
+        if (blob.size <= photoResizeTargetBytes) {
+            break;
+        }
+    }
+
+    return bestBlob;
+};
 
 const resizedPhotoFile = async (file) => {
     const image = await loadPhotoImage(file);
@@ -294,35 +366,44 @@ const resizedPhotoFile = async (file) => {
         return file;
     }
 
-    const scale = longestSide > photoResizeMaxDimension ? photoResizeMaxDimension / longestSide : 1;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(width * scale));
-    canvas.height = Math.max(1, Math.round(height * scale));
+    let bestBlob = null;
 
-    const context = canvas.getContext('2d', { alpha: false });
+    for (const targetLongestSide of photoResizeTargetDimensions(longestSide)) {
+        const canvas = drawPhotoToCanvas(image, width, height, targetLongestSide);
 
-    if (!context) {
-        return file;
+        if (!canvas) {
+            continue;
+        }
+
+        const blob = await compressedPhotoBlob(canvas);
+
+        if (!blob) {
+            continue;
+        }
+
+        if (!bestBlob || blob.size < bestBlob.size) {
+            bestBlob = blob;
+        }
+
+        if (blob.size <= photoResizeTargetBytes) {
+            break;
+        }
     }
 
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    const blob = await canvasToJpegBlob(canvas);
-
-    if (!blob || blob.size >= file.size) {
+    if (!bestBlob || bestBlob.size >= file.size) {
         return file;
     }
 
     try {
-        return new File([blob], file.name, {
+        return new File([bestBlob], file.name, {
             type: 'image/jpeg',
             lastModified: file.lastModified,
         });
     } catch (_error) {
-        blob.name = file.name;
-        blob.lastModified = file.lastModified;
+        bestBlob.name = file.name;
+        bestBlob.lastModified = file.lastModified;
 
-        return blob;
+        return bestBlob;
     }
 };
 
@@ -382,11 +463,11 @@ const confirmPhotoResize = (candidates) => {
 const preparePhotoFilesForUpload = async (manager, files) => {
     const candidates = photoCanResizeJpeg() ? photoResizeCandidates(files) : [];
 
-    if (!await confirmPhotoResize(candidates)) {
+    if (candidates.length === 0) {
         return files;
     }
 
-    setPhotoStatus(manager, candidates.length === 1 ? 'Foto verkleinen...' : 'Foto\'s verkleinen...', 'busy', null);
+    setPhotoStatus(manager, candidates.length === 1 ? 'Foto optimaliseren...' : 'Foto\'s optimaliseren...', 'busy', null);
 
     const candidateSet = new Set(candidates);
     const preparedFiles = [];
@@ -707,7 +788,27 @@ photoResizeModal?.querySelectorAll('[data-photo-resize-no]').forEach((element) =
     element.addEventListener('click', () => closePhotoResizeModal(false));
 });
 
+const closeBackgroundFocusModal = () => {
+    if (!backgroundFocusModal) {
+        return;
+    }
+
+    backgroundFocusModal.hidden = true;
+    document.body.classList.remove('has-background-focus-modal');
+    activeBackgroundFocusCard = null;
+    activeBackgroundFocusManager = null;
+};
+
+backgroundFocusModal?.querySelectorAll('[data-background-focus-close]').forEach((element) => {
+    element.addEventListener('click', closeBackgroundFocusModal);
+});
+
 document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && backgroundFocusModal && !backgroundFocusModal.hidden) {
+        closeBackgroundFocusModal();
+        return;
+    }
+
     if (event.key === 'Escape' && photoResizeModal && !photoResizeModal.hidden) {
         closePhotoResizeModal(false);
         return;
@@ -1968,6 +2069,7 @@ const uploadPhotoFiles = async (manager, files, uploadName) => {
             files: [file],
             progressEnd,
             progressStart,
+            showProgress: true,
             statusMessage,
             upload: true,
             uploadName,
@@ -1984,7 +2086,7 @@ const uploadPhotoFiles = async (manager, files, uploadName) => {
         ? 'Foto opgeslagen.'
         : 'Foto\'s opgeslagen.';
 
-    setPhotoStatus(manager, message, 'success', 100);
+    setPhotoStatus(manager, message, 'success', 100, true);
     clearUnsavedChanges(form);
     window.setTimeout(() => window.location.reload(), 850);
 };
@@ -2031,6 +2133,120 @@ const setBackgroundPageCheckboxes = (card, checked) => {
     syncBackgroundAllCheckbox(card);
 };
 
+const backgroundFocusValue = (value) => {
+    const number = Number.parseFloat(value);
+
+    return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : 50;
+};
+
+const backgroundFocusPositionText = (x, y) => `${x.toFixed(2).replace(/\.?0+$/, '')}% ${y.toFixed(2).replace(/\.?0+$/, '')}%`;
+
+const isBackgroundFocusCard = (card) => card?.querySelector('[data-background-display]')?.value === 'cover-focus';
+
+const syncBackgroundFocusCardState = (card) => {
+    card?.classList.toggle('has-background-focus-trigger', isBackgroundFocusCard(card));
+};
+
+const syncBackgroundFocusFields = (card) => {
+    const inputX = card?.querySelector('[data-background-focus-x]');
+    const inputY = card?.querySelector('[data-background-focus-y]');
+
+    if (!inputX || !inputY) {
+        return;
+    }
+
+    const x = backgroundFocusValue(inputX.value);
+    const y = backgroundFocusValue(inputY.value);
+
+    inputX.value = x.toFixed(2).replace(/\.?0+$/, '');
+    inputY.value = y.toFixed(2).replace(/\.?0+$/, '');
+};
+
+const syncBackgroundFocusModal = () => {
+    const card = activeBackgroundFocusCard;
+    const inputX = card?.querySelector('[data-background-focus-x]');
+    const inputY = card?.querySelector('[data-background-focus-y]');
+    const display = card?.querySelector('[data-background-display]');
+
+    if (!backgroundFocusModalPicker || !backgroundFocusModalImage || !backgroundFocusModalPreview || !inputX || !inputY) {
+        return;
+    }
+
+    const x = backgroundFocusValue(inputX.value);
+    const y = backgroundFocusValue(inputY.value);
+    const option = display?.selectedOptions?.[0] || null;
+    const isFocusMode = display?.value === 'cover-focus';
+    const backgroundSize = option?.dataset.backgroundSize || 'cover';
+    const backgroundPosition = isFocusMode
+        ? backgroundFocusPositionText(x, y)
+        : option?.dataset.backgroundPosition || 'center center';
+
+    backgroundFocusModalPreview.style.backgroundImage = `url("${backgroundFocusModalImage.src}")`;
+    backgroundFocusModalPreview.style.backgroundSize = backgroundSize;
+    backgroundFocusModalPreview.style.backgroundPosition = backgroundPosition;
+    backgroundFocusModalPicker.style.setProperty('--focus-x', `${x}%`);
+    backgroundFocusModalPicker.style.setProperty('--focus-y', `${y}%`);
+
+    const marker = backgroundFocusModalPicker.querySelector('.background-focus-marker');
+    const pickerBox = backgroundFocusModalPicker.getBoundingClientRect();
+    const imageBox = backgroundFocusModalImage.getBoundingClientRect();
+
+    if (marker && pickerBox.width > 0 && pickerBox.height > 0 && imageBox.width > 0 && imageBox.height > 0) {
+        marker.style.left = `${(imageBox.left - pickerBox.left) + ((imageBox.width * x) / 100)}px`;
+        marker.style.top = `${(imageBox.top - pickerBox.top) + ((imageBox.height * y) / 100)}px`;
+    }
+
+    if (backgroundFocusModalValue) {
+        backgroundFocusModalValue.textContent = `${Math.round(x)}% / ${Math.round(y)}%`;
+    }
+};
+
+const openBackgroundFocusModal = (card, manager) => {
+    const display = card?.querySelector('[data-background-display]');
+    const imageUrl = display?.dataset.backgroundFocusImage || '';
+
+    if (!backgroundFocusModal || !backgroundFocusModalImage || !display || imageUrl === '') {
+        return;
+    }
+
+    activeBackgroundFocusCard = card;
+    activeBackgroundFocusManager = manager;
+    backgroundFocusModalImage.src = imageUrl;
+    backgroundFocusModal.hidden = false;
+    document.body.classList.add('has-background-focus-modal');
+    syncBackgroundFocusFields(card);
+
+    window.requestAnimationFrame(() => {
+        syncBackgroundFocusModal();
+        backgroundFocusModalPicker?.focus();
+    });
+};
+
+const setBackgroundFocusPoint = (card, clientX, clientY) => {
+    const image = backgroundFocusModalImage;
+    const box = image?.getBoundingClientRect();
+    const inputX = card?.querySelector('[data-background-focus-x]');
+    const inputY = card?.querySelector('[data-background-focus-y]');
+    const display = card?.querySelector('[data-background-display]');
+
+    if (!card || !box || box.width <= 0 || box.height <= 0 || !inputX || !inputY) {
+        return;
+    }
+
+    const x = backgroundFocusValue(((clientX - box.left) / box.width) * 100);
+    const y = backgroundFocusValue(((clientY - box.top) / box.height) * 100);
+
+    inputX.value = x.toFixed(2).replace(/\.?0+$/, '');
+    inputY.value = y.toFixed(2).replace(/\.?0+$/, '');
+
+    if (display?.querySelector('option[value="cover-focus"]')) {
+        display.value = 'cover-focus';
+    }
+
+    syncBackgroundFocusFields(card);
+    syncBackgroundFocusModal();
+};
+
 const syncBackgroundMenuLayer = (menu) => {
     menu?.closest('[data-photo-card]')?.classList.toggle('has-open-background-menu', menu.open);
 };
@@ -2040,6 +2256,24 @@ const backgroundMenuAutosaveOptions = {
     showProgress: false,
     successMessage: 'Opgeslagen.',
 };
+
+backgroundFocusModalImage?.addEventListener('load', syncBackgroundFocusModal);
+window.addEventListener('resize', () => {
+    if (backgroundFocusModal && !backgroundFocusModal.hidden) {
+        syncBackgroundFocusModal();
+    }
+});
+
+backgroundFocusModalPicker?.addEventListener('pointerdown', (event) => {
+    if (!activeBackgroundFocusCard) {
+        return;
+    }
+
+    event.preventDefault();
+    setBackgroundFocusPoint(activeBackgroundFocusCard, event.clientX, event.clientY);
+    markUnsavedChanges(activeBackgroundFocusCard);
+    schedulePhotoAutosave(activeBackgroundFocusManager, backgroundMenuAutosaveOptions);
+});
 
 document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
     let draggedCard = null;
@@ -2118,9 +2352,16 @@ document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
 
     grid.addEventListener('click', (event) => {
         const card = event.target.closest('[data-photo-card]');
+        const thumb = event.target.closest('.photo-thumb');
 
         if (event.target.closest('[data-background-menu]')) {
             event.stopPropagation();
+        }
+
+        if (thumb && card && isBackgroundFocusCard(card)) {
+            event.preventDefault();
+            openBackgroundFocusModal(card, manager);
+            return;
         }
 
         if (event.target.closest('[data-photo-up]')) {
@@ -2192,8 +2433,16 @@ document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
         }
 
         if (event.target.matches('[data-background-display]')) {
+            syncBackgroundFocusFields(card);
+            syncBackgroundFocusCardState(card);
+            if (card === activeBackgroundFocusCard) {
+                syncBackgroundFocusModal();
+            }
             markUnsavedChanges(event.target);
             schedulePhotoAutosave(manager, backgroundMenuAutosaveOptions);
+            if (event.target.value === 'cover-focus') {
+                openBackgroundFocusModal(card, manager);
+            }
             return;
         }
 
@@ -2203,10 +2452,25 @@ document.querySelectorAll('[data-photo-grid]').forEach((grid) => {
         }
     });
 
-    grid.querySelectorAll('[data-photo-card]').forEach(syncBackgroundAllCheckbox);
+    grid.querySelectorAll('[data-photo-card]').forEach((card) => {
+        syncBackgroundAllCheckbox(card);
+        syncBackgroundFocusFields(card);
+        syncBackgroundFocusCardState(card);
+    });
     grid.querySelectorAll('[data-background-menu]').forEach((menu) => {
         syncBackgroundMenuLayer(menu);
-        menu.addEventListener('toggle', () => syncBackgroundMenuLayer(menu));
+        menu.addEventListener('toggle', () => {
+            if (menu.open) {
+                grid.querySelectorAll('[data-background-menu]').forEach((otherMenu) => {
+                    if (otherMenu !== menu) {
+                        otherMenu.open = false;
+                        syncBackgroundMenuLayer(otherMenu);
+                    }
+                });
+            }
+
+            syncBackgroundMenuLayer(menu);
+        });
     });
 });
 

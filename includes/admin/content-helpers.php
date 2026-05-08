@@ -332,12 +332,21 @@ function admin_background_file_for_storage(string $file): string
         throw new RuntimeException('De background foto kon niet naar assets/img/backgrounds worden gekopieerd.');
     }
 
+    if (function_exists('admin_compress_large_jpeg')) {
+        admin_compress_large_jpeg($target);
+    }
+
     return admin_background_upload_directory() . '/' . basename($target);
 }
 
 function admin_background_display_mode(string $mode): string
 {
     return background_display_mode($mode);
+}
+
+function admin_background_focus_value($value): float
+{
+    return background_focus_value($value);
 }
 
 function admin_clean_background_pages($pages): array
@@ -372,7 +381,7 @@ function admin_media_form_key(string $file): string
     return $file === '' ? '' : sha1($file);
 }
 
-function admin_background_item_from_media_item(array $item, ?array $pages = null, string $display = ''): array
+function admin_background_item_from_media_item(array $item, ?array $pages = null, string $display = '', $focusX = 50, $focusY = 50): array
 {
     $file = admin_safe_media_filename((string) ($item['file'] ?? ''));
 
@@ -381,6 +390,8 @@ function admin_background_item_from_media_item(array $item, ?array $pages = null
         'title' => trim((string) ($item['title'] ?? '')),
         'pages' => $pages ?? admin_default_background_pages(),
         'display' => admin_background_display_mode($display),
+        'focus_x' => admin_background_focus_value($focusX),
+        'focus_y' => admin_background_focus_value($focusY),
     ];
 }
 
@@ -400,7 +411,13 @@ function admin_normalize_background_item($item): array
         ? admin_clean_background_pages($item['pages'])
         : admin_default_background_pages();
 
-    return admin_background_item_from_media_item($mediaItem, $pages, (string) ($item['display'] ?? ''));
+    return admin_background_item_from_media_item(
+        $mediaItem,
+        $pages,
+        (string) ($item['display'] ?? ''),
+        $item['focus_x'] ?? 50,
+        $item['focus_y'] ?? 50
+    );
 }
 
 function admin_normalize_background_items(array $items): array
@@ -425,6 +442,8 @@ function admin_backgrounds_from_post(array $post, array $uploaded = []): array
     $titles = $post['title'] ?? [];
     $pagesByKey = is_array($post['pages'] ?? null) ? $post['pages'] : [];
     $displayByKey = is_array($post['display'] ?? null) ? $post['display'] : [];
+    $focusXByKey = is_array($post['focus_x'] ?? null) ? $post['focus_x'] : [];
+    $focusYByKey = is_array($post['focus_y'] ?? null) ? $post['focus_y'] : [];
     $remove = [];
     $items = [];
 
@@ -457,7 +476,9 @@ function admin_backgrounds_from_post(array $post, array $uploaded = []): array
                 'title' => trim((string) ($titles[$index] ?? '')),
             ],
             array_key_exists($key, $pagesByKey) ? admin_clean_background_pages($pagesByKey[$key]) : admin_default_background_pages(),
-            (string) ($displayByKey[$key] ?? '')
+            (string) ($displayByKey[$key] ?? ''),
+            $focusXByKey[$key] ?? 50,
+            $focusYByKey[$key] ?? 50
         );
     }
 

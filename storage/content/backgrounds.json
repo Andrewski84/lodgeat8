@@ -1,38 +1,6 @@
 [
     {
-        "file": "backgrounds/crw-6837.jpg",
-        "title": "",
-        "pages": [
-            "home",
-            "kamer-1"
-        ],
-        "display": "cover-center"
-    },
-    {
-        "file": "backgrounds/crw-6831.jpg",
-        "title": "",
-        "pages": [
-            "home",
-            "leuven",
-            "kamer-1",
-            "kamer-2",
-            "locatie",
-            "contact",
-            "links",
-            "voorwaarden"
-        ],
-        "display": "cover-center"
-    },
-    {
-        "file": "backgrounds/crw-7158.jpg",
-        "title": "",
-        "pages": [
-            "kamer-1"
-        ],
-        "display": "cover-center"
-    },
-    {
-        "file": "backgrounds/crw-7155.jpg",
+        "file": "backgrounds/crw-6905.jpg",
         "title": "",
         "pages": [
             "home",
@@ -45,6 +13,242 @@
             "links",
             "voorwaarden"
         ],
-        "display": "cover-center"
+        "display": "cover-focus",
+        "focus_x": 71.38,
+        "focus_y": 59.02
+    },
+    {
+        "file": "backgrounds/crw-6887.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6879.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6869.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6903.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6904.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6908.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6914.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6919.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6930.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6935.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6898.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6900.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
+    },
+    {
+        "file": "backgrounds/crw-6901.jpg",
+        "title": "",
+        "pages": [
+            "home",
+            "leuven",
+            "kamer-1",
+            "kamer-2",
+            "kamer-3",
+            "locatie",
+            "contact",
+            "links",
+            "voorwaarden"
+        ],
+        "display": "cover-center",
+        "focus_x": 50,
+        "focus_y": 50
     }
 ]

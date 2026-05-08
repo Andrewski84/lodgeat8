@@ -39,7 +39,8 @@ body.has-unsaved-modal {
 
 body.has-link-modal,
 body.has-technical-modal,
-body.has-photo-resize-modal {
+body.has-photo-resize-modal,
+body.has-background-focus-modal {
     overflow: hidden;
 }
 
@@ -835,6 +836,10 @@ select:focus {
     object-fit: cover;
 }
 
+.photo-card.has-background-focus-trigger .photo-thumb {
+    cursor: pointer;
+}
+
 .background-photo-menu {
     position: relative;
     cursor: default;
@@ -924,6 +929,172 @@ select:focus {
 
 .background-display-field {
     margin-top: 2px;
+}
+
+.background-focus-marker {
+    position: absolute;
+    left: var(--focus-x, 50%);
+    top: var(--focus-y, 50%);
+    width: 18px;
+    height: 18px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--admin-accent), 0 2px 10px rgba(0, 0, 0, 0.35);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.background-focus-marker::before,
+.background-focus-marker::after {
+    content: "";
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 0 1px var(--admin-accent);
+}
+
+.background-focus-marker::before {
+    top: 50%;
+    left: -8px;
+    right: -8px;
+    height: 2px;
+    transform: translateY(-50%);
+}
+
+.background-focus-marker::after {
+    top: -8px;
+    bottom: -8px;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+}
+
+.background-focus-preview {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    background-color: #ddd;
+    background-repeat: no-repeat;
+    border: 1px solid var(--admin-line);
+}
+
+.background-focus-preview::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+}
+
+.background-focus-preview span {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    padding: 4px 7px;
+    color: #fff;
+    background: rgba(22, 22, 22, 0.72);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.background-focus-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+}
+
+.background-focus-modal[hidden] {
+    display: none !important;
+}
+
+.background-focus-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(22, 22, 22, 0.58);
+}
+
+.background-focus-modal-panel {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 14px;
+    width: min(100%, 980px);
+    max-height: min(90vh, 820px);
+    padding: 18px;
+    background: #fff;
+    border: 1px solid var(--admin-line);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+}
+
+.background-focus-modal-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.background-focus-modal-head h2,
+.background-focus-modal-head p {
+    margin: 0;
+}
+
+.background-focus-modal-head p {
+    margin-top: 5px;
+    color: var(--admin-muted);
+    line-height: 1.4;
+}
+
+.background-focus-modal-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.8fr);
+    gap: 14px;
+    min-height: 0;
+}
+
+.background-focus-modal-picker {
+    position: relative;
+    display: grid;
+    min-height: min(58vh, 560px);
+    padding: 0;
+    place-items: center;
+    overflow: hidden;
+    background: #2b2b2b;
+    border: 1px solid var(--admin-line);
+    cursor: crosshair;
+}
+
+.background-focus-modal-picker img {
+    display: block;
+    max-width: 100%;
+    max-height: min(58vh, 560px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.background-focus-modal-picker .background-focus-marker {
+    left: var(--focus-x, 50%);
+    top: var(--focus-y, 50%);
+}
+
+.background-focus-modal-preview {
+    align-self: start;
+    width: 100%;
+}
+
+.background-focus-modal-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.background-focus-modal-actions output {
+    color: var(--admin-muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .photo-card-actions {
@@ -1530,5 +1701,29 @@ select:focus {
 
     .unsaved-modal-actions {
         flex-direction: column-reverse;
+    }
+
+    .background-focus-modal {
+        padding: 10px;
+    }
+
+    .background-focus-modal-panel {
+        max-height: calc(100vh - 20px);
+        padding: 14px;
+        overflow: auto;
+    }
+
+    .background-focus-modal-head,
+    .background-focus-modal-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .background-focus-modal-body {
+        grid-template-columns: 1fr;
+    }
+
+    .background-focus-modal-picker {
+        min-height: 48vh;
     }
 }

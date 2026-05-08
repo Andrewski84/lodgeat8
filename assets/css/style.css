@@ -542,7 +542,7 @@ h2 {
 .lightbox-figure {
     display: grid;
     gap: 12px;
-    max-width: min(100%, 1120px);
+    max-width: min(94vw, 1280px);
     max-height: 100%;
     margin: 0;
     opacity: 0;
@@ -558,7 +558,7 @@ h2 {
 .lightbox-image {
     display: block;
     max-width: 100%;
-    max-height: calc(100vh - 120px);
+    max-height: calc(100vh - 92px);
     object-fit: contain;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
@@ -1525,7 +1525,7 @@ body.has-lightbox .site-footer {
     }
 
     .lightbox-image {
-        max-height: calc(100vh - 96px);
+        max-height: calc(100vh - 76px);
     }
 
     .lightbox-button {
