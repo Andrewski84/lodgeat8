@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Public front controller.
+ *
+ * Every visitor request enters here. The file keeps the request flow small:
+ * bootstrap shared helpers and content, resolve the page key from the URL,
+ * process the contact form only when the resolved page is the contact page,
+ * and finally hand rendering to the shared layout.
+ */
 require __DIR__ . '/includes/bootstrap.php';
 
 $currentLanguage = requested_language();

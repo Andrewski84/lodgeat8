@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin session hardening.
+ *
+ * The admin area uses a separate session name, HTTP-only cookies, SameSite=Lax,
+ * optional secure cookies on HTTPS, an inactivity timeout and periodic session
+ * ID regeneration. A lightweight user-agent fingerprint helps invalidate a
+ * stolen session if it is replayed from a different browser profile.
+ */
+
 function admin_is_https_request(): bool
 {
     if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
@@ -30,6 +39,11 @@ function admin_session_timeout_seconds(): int
 
 function admin_refresh_session_state(): void
 {
+    /*
+     * Refresh is called after session_start() and before each controller action.
+     * It both expires stale sessions and renews active ones, so admin users can
+     * keep working while idle sessions quietly lose authentication.
+     */
     if (session_status() !== PHP_SESSION_ACTIVE) {
         return;
     }

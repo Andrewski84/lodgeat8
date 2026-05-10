@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin authentication and password reset.
+ *
+ * This module covers credential creation/update, login throttling, neutral
+ * password reset requests, reset-token storage and reset completion. Runtime
+ * state is stored in JSON files protected by shared lock helpers so concurrent
+ * requests cannot corrupt counters or reuse reset tokens.
+ */
+
 function admin_normalized_username(string $username): string
 {
     $username = strtolower(trim($username));
@@ -13,6 +22,19 @@ function admin_login_email_is_valid(string $username): bool
     return admin_normalized_username($username) !== '';
 }
 
+function admin_auth_lock_path(): string
+{
+    return app_named_lock_path('admin-auth');
+}
+
+function admin_with_auth_lock(callable $callback)
+{
+    // Use one broad auth lock when credential files and reset-token files must
+    // change together. This keeps password changes and token invalidation atomic
+    // from the admin user's point of view.
+    return app_with_file_lock(admin_auth_lock_path(), $callback, 'De beheerlogin kon niet veilig worden bijgewerkt.');
+}
+
 function admin_save_credentials(string $username, string $password): void
 {
     $username = admin_normalized_username($username);
@@ -21,38 +43,44 @@ function admin_save_credentials(string $username, string $password): void
         throw new RuntimeException('Gebruik een geldig e-mailadres als login.');
     }
 
-    admin_write_settings([
-        'username' => $username,
-        'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-        'password_updated_at' => date('c'),
-    ]);
-    admin_write_password_reset_tokens([]);
+    admin_with_auth_lock(static function () use ($username, $password): void {
+        admin_write_settings([
+            'username' => $username,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'password_updated_at' => date('c'),
+        ]);
+        admin_write_password_reset_tokens([]);
+    });
 }
 
 function admin_update_credentials(string $username, ?string $password = null): void
 {
-    $settings = admin_settings();
     $username = admin_normalized_username($username);
-    unset($settings['password_reset_tokens']);
 
     if ($username === '') {
         throw new RuntimeException('Gebruik een geldig e-mailadres als login.');
     }
 
-    $settings['username'] = $username;
+    admin_with_auth_lock(static function () use ($username, $password): void {
+        $settings = admin_settings();
+        unset($settings['password_reset_tokens']);
+        $previousUsername = admin_normalized_username((string) ($settings['username'] ?? ''));
+        $settings['username'] = $username;
 
-    $passwordChanged = $password !== null && $password !== '';
+        $passwordChanged = $password !== null && $password !== '';
+        $usernameChanged = $previousUsername === '' || !hash_equals($previousUsername, $username);
 
-    if ($passwordChanged) {
-        $settings['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
-        $settings['password_updated_at'] = date('c');
-    }
+        if ($passwordChanged) {
+            $settings['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $settings['password_updated_at'] = date('c');
+        }
 
-    admin_write_settings($settings);
+        admin_write_settings($settings);
 
-    if ($passwordChanged) {
-        admin_write_password_reset_tokens([]);
-    }
+        if ($passwordChanged || $usernameChanged) {
+            admin_write_password_reset_tokens([]);
+        }
+    });
 }
 
 function admin_client_ip(): string
@@ -81,46 +109,12 @@ function admin_login_attempt_keys(string $username): array
 
 function admin_read_login_attempts(): array
 {
-    $path = admin_login_attempts_path();
-
-    if (!is_file($path)) {
-        return [];
-    }
-
-    $json = file_get_contents($path);
-    $data = json_decode((string) $json, true);
-
-    return is_array($data) ? $data : [];
+    return app_read_json_file(admin_login_attempts_path(), []);
 }
 
 function admin_write_login_attempts(array $attempts): void
 {
-    if (!is_dir(storage_path())) {
-        if (!mkdir(storage_path(), 0775, true) && !is_dir(storage_path())) {
-            throw new RuntimeException('De opslagmap kon niet worden aangemaakt.');
-        }
-    }
-
-    $json = json_encode($attempts, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-    if ($json === false) {
-        throw new RuntimeException('Loginbeveiliging kon niet worden opgeslagen.');
-    }
-
-    $temporaryPath = admin_login_attempts_path() . '.tmp';
-
-    if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
-        throw new RuntimeException('Loginbeveiliging kon niet tijdelijk worden opgeslagen.');
-    }
-
-    if (!@rename($temporaryPath, admin_login_attempts_path())) {
-        if (!@copy($temporaryPath, admin_login_attempts_path())) {
-            @unlink($temporaryPath);
-            throw new RuntimeException('Loginbeveiliging kon niet definitief worden opgeslagen.');
-        }
-
-        @unlink($temporaryPath);
-    }
+    app_write_json_file(admin_login_attempts_path(), $attempts, 'Loginbeveiliging kon niet worden opgeslagen.');
 }
 
 function admin_prune_login_attempts(array $attempts): array
@@ -159,37 +153,56 @@ function admin_login_throttle_seconds(string $username): int
 
 function admin_record_failed_login(string $username): void
 {
-    $attempts = admin_prune_login_attempts(admin_read_login_attempts());
-    $now = time();
+    app_update_json_file(
+        admin_login_attempts_path(),
+        static function (array $attempts) use ($username): array {
+            $attempts = admin_prune_login_attempts($attempts);
+            $now = time();
 
-    foreach (admin_login_attempt_keys($username) as $key) {
-        $entry = is_array($attempts[$key] ?? null) ? $attempts[$key] : [];
-        $count = max(0, (int) ($entry['count'] ?? 0)) + 1;
-        $delay = min(15 * 60, 2 ** min($count, 10));
+            foreach (admin_login_attempt_keys($username) as $key) {
+                $entry = is_array($attempts[$key] ?? null) ? $attempts[$key] : [];
+                $count = max(0, (int) ($entry['count'] ?? 0)) + 1;
+                $delay = min(15 * 60, 2 ** min($count, 10));
 
-        $attempts[$key] = [
-            'count' => $count,
-            'lock_until' => $now + max(2, $delay),
-            'updated_at' => $now,
-        ];
-    }
+                $attempts[$key] = [
+                    'count' => $count,
+                    'lock_until' => $now + max(2, $delay),
+                    'updated_at' => $now,
+                ];
+            }
 
-    admin_write_login_attempts($attempts);
+            return $attempts;
+        },
+        [],
+        'Loginbeveiliging kon niet worden opgeslagen.'
+    );
 }
 
 function admin_clear_login_attempts(string $username): void
 {
-    $attempts = admin_prune_login_attempts(admin_read_login_attempts());
+    app_update_json_file(
+        admin_login_attempts_path(),
+        static function (array $attempts) use ($username): array {
+            $attempts = admin_prune_login_attempts($attempts);
 
-    foreach (admin_login_attempt_keys($username) as $key) {
-        unset($attempts[$key]);
-    }
+            foreach (admin_login_attempt_keys($username) as $key) {
+                unset($attempts[$key]);
+            }
 
-    admin_write_login_attempts($attempts);
+            return $attempts;
+        },
+        [],
+        'Loginbeveiliging kon niet worden opgeslagen.'
+    );
 }
 
 function admin_login(string $username, string $password): bool
 {
+    /*
+     * Login verifies both the normalized email and password hash. Failed
+     * attempts are recorded against both IP and email+IP scopes, making brute
+     * force attempts expensive without permanently locking out valid users.
+     */
     if (admin_login_throttle_seconds($username) > 0) {
         return false;
     }
@@ -266,16 +279,7 @@ function admin_password_reset_attempt_keys(string $email, string $scope = 'reque
 
 function admin_read_password_reset_attempts(): array
 {
-    $path = admin_password_reset_attempts_path();
-
-    if (!is_file($path)) {
-        return [];
-    }
-
-    $json = file_get_contents($path);
-    $data = json_decode((string) $json, true);
-
-    return is_array($data) ? $data : [];
+    return app_read_json_file(admin_password_reset_attempts_path(), []);
 }
 
 function admin_write_password_reset_attempts(array $attempts): void
@@ -344,26 +348,40 @@ function admin_password_reset_throttle_seconds(string $email, string $scope = 'r
 
 function admin_record_password_reset_attempt(string $email, string $scope = 'request'): void
 {
-    $attempts = admin_prune_password_reset_attempts(admin_read_password_reset_attempts());
+    app_update_json_file(
+        admin_password_reset_attempts_path(),
+        static function (array $attempts) use ($email, $scope): array {
+            $attempts = admin_prune_password_reset_attempts($attempts);
 
-    foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
-        $timestamps = array_map('intval', (array) ($attempts[$key] ?? []));
-        $timestamps[] = time();
-        $attempts[$key] = array_slice($timestamps, -admin_password_reset_max_attempts());
-    }
+            foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
+                $timestamps = array_map('intval', (array) ($attempts[$key] ?? []));
+                $timestamps[] = time();
+                $attempts[$key] = array_slice($timestamps, -admin_password_reset_max_attempts());
+            }
 
-    admin_write_password_reset_attempts($attempts);
+            return $attempts;
+        },
+        [],
+        'De resetbeveiliging kon niet worden opgeslagen.'
+    );
 }
 
 function admin_clear_password_reset_attempts(string $email, string $scope = 'request'): void
 {
-    $attempts = admin_prune_password_reset_attempts(admin_read_password_reset_attempts());
+    app_update_json_file(
+        admin_password_reset_attempts_path(),
+        static function (array $attempts) use ($email, $scope): array {
+            $attempts = admin_prune_password_reset_attempts($attempts);
 
-    foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
-        unset($attempts[$key]);
-    }
+            foreach (admin_password_reset_attempt_keys($email, $scope) as $key) {
+                unset($attempts[$key]);
+            }
 
-    admin_write_password_reset_attempts($attempts);
+            return $attempts;
+        },
+        [],
+        'De resetbeveiliging kon niet worden opgeslagen.'
+    );
 }
 
 function admin_clean_mail_header(string $value): string
@@ -430,18 +448,28 @@ function admin_password_reset_tokens_path(): string
 
 function admin_read_password_reset_tokens(): array
 {
-    $path = admin_password_reset_tokens_path();
+    return app_with_file_lock(
+        app_lock_path_for_file(admin_password_reset_tokens_path()),
+        static function (): array {
+            return admin_read_password_reset_tokens_unlocked();
+        },
+        'De reset-tokens konden niet worden gelezen.',
+        LOCK_SH
+    );
+}
 
-    if (is_file($path)) {
-        $json = file_get_contents($path);
-        $decoded = json_decode((string) $json, true);
+function admin_read_password_reset_tokens_unlocked(): array
+{
+    return app_read_json_file_unlocked(admin_password_reset_tokens_path(), []);
+}
 
-        return is_array($decoded) ? $decoded : [];
-    }
-
-    $legacyTokens = admin_settings()['password_reset_tokens'] ?? [];
-
-    return is_array($legacyTokens) ? $legacyTokens : [];
+function admin_write_password_reset_tokens_unlocked(array $tokens): void
+{
+    app_write_json_file_unlocked(
+        admin_password_reset_tokens_path(),
+        admin_normalized_password_reset_tokens($tokens, false),
+        'De reset-tokens konden niet worden opgeslagen.'
+    );
 }
 
 function admin_write_password_reset_tokens(array $tokens): void
@@ -490,8 +518,6 @@ function admin_password_reset_token_exists(string $token): bool
     }
 
     $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens());
-    admin_write_password_reset_tokens($tokens);
-
     $hash = hash('sha256', $token);
 
     foreach ($tokens as $entry) {
@@ -505,19 +531,26 @@ function admin_password_reset_token_exists(string $token): bool
 
 function admin_generate_password_reset_link(): string
 {
-    $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens(), false);
-    $now = time();
     $token = bin2hex(random_bytes(32));
-    $tokens[] = [
-        'hash' => hash('sha256', $token),
-        'expires' => $now + admin_password_reset_ttl_seconds(),
-        'created' => $now,
-        'used' => false,
-        'requested_ip' => admin_client_ip(),
-    ];
 
-    // Keep only recent reset tokens to cap storage growth.
-    admin_write_password_reset_tokens(array_slice($tokens, -5));
+    app_with_file_lock(
+        app_lock_path_for_file(admin_password_reset_tokens_path()),
+        static function () use ($token): void {
+            $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens_unlocked(), false);
+            $now = time();
+            $tokens[] = [
+                'hash' => hash('sha256', $token),
+                'expires' => $now + admin_password_reset_ttl_seconds(),
+                'created' => $now,
+                'used' => false,
+                'requested_ip' => admin_client_ip(),
+            ];
+
+            // Keep only recent reset tokens to cap storage growth.
+            admin_write_password_reset_tokens_unlocked(array_slice($tokens, -5));
+        },
+        'De resetlink kon niet worden aangemaakt.'
+    );
 
     $baseUrl = admin_absolute_script_url();
     $separator = str_contains($baseUrl, '?') ? '&' : '?';
@@ -546,32 +579,42 @@ function admin_consume_password_reset_token(string $token, string $newPassword):
         return false;
     }
 
-    $settings = admin_settings();
-    $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens(), false);
-    $now = time();
-    $tokenHash = hash('sha256', $token);
-    $hasMatch = false;
+    return (bool) admin_with_auth_lock(static function () use ($token, $newPassword): bool {
+        return (bool) app_with_file_lock(
+            app_lock_path_for_file(admin_password_reset_tokens_path()),
+            static function () use ($token, $newPassword): bool {
+                $settings = admin_settings();
+                $tokens = admin_normalized_password_reset_tokens(admin_read_password_reset_tokens_unlocked(), false);
+                $now = time();
+                $tokenHash = hash('sha256', $token);
+                $hasMatch = false;
 
-    foreach ($tokens as $index => $entry) {
-        $isUsable = !(bool) ($entry['used'] ?? false) && (int) ($entry['expires'] ?? 0) > $now;
+                foreach ($tokens as $entry) {
+                    $isUsable = !(bool) ($entry['used'] ?? false) && (int) ($entry['expires'] ?? 0) > $now;
 
-        if ($isUsable && hash_equals((string) $entry['hash'], $tokenHash)) {
-            $tokens[$index]['used'] = true;
-            $hasMatch = true;
-            break;
-        }
-    }
+                    if ($isUsable && hash_equals((string) $entry['hash'], $tokenHash)) {
+                        $hasMatch = true;
+                        break;
+                    }
+                }
 
-    if (!$hasMatch) {
-        return false;
-    }
+                if (!$hasMatch) {
+                    return false;
+                }
 
-    $settings['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
-    $settings['password_updated_at'] = date('c');
-    unset($settings['password_reset_tokens']);
-    admin_write_settings($settings);
-    admin_write_password_reset_tokens($tokens);
-    admin_clear_login_attempts((string) ($settings['username'] ?? ''));
+                $settings['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+                $settings['password_updated_at'] = date('c');
+                unset($settings['password_reset_tokens']);
 
-    return true;
+                // Invalidate every outstanding reset token before writing the new
+                // password, so a second concurrent submit cannot reuse this link.
+                admin_write_password_reset_tokens_unlocked([]);
+                admin_write_settings($settings);
+                admin_clear_login_attempts((string) ($settings['username'] ?? ''));
+
+                return true;
+            },
+            'De resetlink kon niet worden gebruikt.'
+        );
+    });
 }

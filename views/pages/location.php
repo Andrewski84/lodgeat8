@@ -1,3 +1,12 @@
+<?php
+/*
+ * Location page template.
+ *
+ * The editable map value can be either a normal Google Maps URL or an embed
+ * URL. map_embed_url() normalizes it for the iframe while the fallback link
+ * remains safe for opening in a new tab.
+ */
+?>
 <?php render_intro($page['intro']); ?>
 <?php $mapUrl = trim((string) ($page['map_url'] ?? '')); ?>
 <?php $mapEmbedUrl = map_embed_url($mapUrl); ?>

@@ -1,6 +1,19 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Mail delivery adapter.
+ *
+ * Mail settings are read from storage/mail-settings.json at runtime. The admin
+ * area deliberately does not edit those technical settings; deployments can
+ * choose native PHP mail() or PHPMailer SMTP by editing that JSON file directly
+ * on the server.
+ *
+ * app_send_email() validates addresses, chooses sender defaults from site
+ * content, and then tries PHPMailer only when SMTP is explicitly enabled.
+ * Otherwise it falls back to native mail().
+ */
+
 function app_mail_settings_path(): string
 {
     return storage_path('mail-settings.json');
@@ -61,90 +74,9 @@ function app_mail_settings(): array
     return app_normalized_mail_settings(is_array($decoded) ? $decoded : []);
 }
 
-function app_mail_password_is_set(): bool
-{
-    return (string) (app_mail_settings()['password'] ?? '') !== '';
-}
-
 function app_write_json_runtime_file(string $path, array $data, string $errorMessage): void
 {
-    if (!is_dir(storage_path())) {
-        if (!mkdir(storage_path(), 0775, true) && !is_dir(storage_path())) {
-            throw new RuntimeException('De opslagmap kon niet worden aangemaakt.');
-        }
-    }
-
-    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-    if ($json === false) {
-        throw new RuntimeException($errorMessage);
-    }
-
-    $temporaryPath = $path . '.tmp';
-
-    if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
-        throw new RuntimeException($errorMessage);
-    }
-
-    if (!@rename($temporaryPath, $path)) {
-        if (!@copy($temporaryPath, $path)) {
-            @unlink($temporaryPath);
-            throw new RuntimeException($errorMessage);
-        }
-
-        @unlink($temporaryPath);
-    }
-}
-
-function app_write_mail_settings(array $settings): void
-{
-    app_write_json_runtime_file(
-        app_mail_settings_path(),
-        app_normalized_mail_settings($settings),
-        'De mailinstellingen konden niet worden opgeslagen.'
-    );
-}
-
-function app_save_mail_settings_from_post(array $post): void
-{
-    $current = app_mail_settings();
-    $input = is_array($post['mail_settings'] ?? null) ? $post['mail_settings'] : [];
-    $port = filter_var($input['port'] ?? 587, FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => 1, 'max_range' => 65535],
-    ]);
-    $password = array_key_exists('password', $input) && (string) $input['password'] !== ''
-        ? (string) $input['password']
-        : (string) ($current['password'] ?? '');
-
-    if (($input['clear_password'] ?? '0') === '1') {
-        $password = '';
-    }
-
-    $settings = app_normalized_mail_settings([
-        'enabled' => (string) ($input['enabled'] ?? '0') === '1',
-        'host' => (string) ($input['host'] ?? ''),
-        'port' => $port === false ? 587 : $port,
-        'smtp_auth' => (string) ($input['smtp_auth'] ?? '0') === '1',
-        'username' => (string) ($input['username'] ?? ''),
-        'password' => $password,
-        'encryption' => (string) ($input['encryption'] ?? 'starttls'),
-        'from_email' => (string) ($input['from_email'] ?? ''),
-        'from_name' => (string) ($input['from_name'] ?? ''),
-    ]);
-
-    if ($settings['enabled'] && $settings['host'] === '') {
-        throw new RuntimeException('Vul een SMTP-host in of schakel SMTP uit.');
-    }
-
-    if ($settings['smtp_auth'] && $settings['enabled'] && $settings['username'] === '') {
-        throw new RuntimeException('Vul een SMTP-gebruikersnaam in of schakel SMTP-authenticatie uit.');
-    }
-
-    if ($settings['from_email'] !== '' && filter_var($settings['from_email'], FILTER_VALIDATE_EMAIL) === false) {
-        throw new RuntimeException('Het afzenderadres heeft geen geldig e-mailadres.');
-    }
-
-    app_write_mail_settings($settings);
+    app_write_json_file($path, $data, $errorMessage);
 }
 
 function app_clean_mail_header(string $value): string
@@ -154,6 +86,11 @@ function app_clean_mail_header(string $value): string
 
 function app_mail_bootstrap_phpmailer(): bool
 {
+    /*
+     * Support several deployment styles: Composer's vendor/autoload.php or a
+     * manually uploaded PHPMailer/src directory in common locations. This keeps
+     * the site usable on shared hosting where Composer may not run.
+     */
     if (class_exists(\PHPMailer\PHPMailer\PHPMailer::class)) {
         return true;
     }
@@ -249,6 +186,11 @@ function app_send_email_with_native_mail(string $to, string $subject, string $bo
 
 function app_send_email(array $config, string $to, string $subject, string $body, string $replyTo = ''): bool
 {
+    /*
+     * A false return means delivery could not be confirmed. Callers still keep
+     * local JSON records where appropriate, because host-level mail failures
+     * should not make visitor messages disappear.
+     */
     $to = filter_var($to, FILTER_VALIDATE_EMAIL);
     $settings = app_mail_settings();
     $fallbackFromEmail = filter_var((string) ($config['site']['email'] ?? ''), FILTER_VALIDATE_EMAIL);

@@ -1,3 +1,12 @@
+/*
+ * Public-site interactions.
+ *
+ * This script enhances server-rendered HTML: background rotation, gallery
+ * slides, a shared lightbox, mobile navigation, language controls and booking
+ * date conversion. The site remains mostly readable without JavaScript, so the
+ * script avoids owning content state that PHP already renders.
+ */
+
 const backgroundSlides = Array.from(document.querySelectorAll('.background-slide'));
 let backgroundIndex = 0;
 
@@ -11,6 +20,10 @@ if (backgroundSlides.length > 1) {
 }
 
 document.querySelectorAll('[data-gallery]').forEach((gallery) => {
+    /*
+     * Each inline gallery rotates its own visible image. The separate lightbox
+     * below reuses the same image list when a visitor wants a larger view.
+     */
     const imageButtons = Array.from(gallery.querySelectorAll('[data-lightbox-trigger]'));
     const images = imageButtons.map((button) => button.querySelector('img')).filter(Boolean);
     const prev = gallery.querySelector('[data-gallery-prev]');

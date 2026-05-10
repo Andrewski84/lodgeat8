@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Deployment readiness check.
+ *
+ * Run this before publishing the site. The script checks PHP capabilities,
+ * required files, writable runtime directories, git-tracked deploy assets,
+ * protected internal folders, runtime secrets that must stay out of git, and
+ * content references such as images and configured URLs.
+ */
+
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
     echo "CLI only.\n";
@@ -189,6 +198,7 @@ foreach ([
     'assets/css/admin.css',
     'assets/js/app.js',
     'assets/js/admin.js',
+    'assets/img/.htaccess',
     'beheer/index.php',
     'beheer/partials/form-helpers.php',
     'beheer/sections',
@@ -232,6 +242,7 @@ foreach ([
     'includes/admin/content-helpers.php',
     'includes/admin/media.php',
     'includes/admin/content-save.php',
+    'assets/img/.htaccess',
     'beheer/sections/.htaccess',
     'beheer/sections/access.php',
     'beheer/sections/contact.php',
@@ -244,10 +255,18 @@ foreach ([
 }
 
 if (is_file(admin_settings_path())) {
-    if ($pathIsGitTracked('storage/admin.php')) {
-        $add($errors, 'storage/admin.php staat in git. Dit bevat runtime login-instellingen en mag niet worden gedeployed vanuit development.');
+    if ($pathIsGitTracked('storage/admin.json')) {
+        $add($errors, 'storage/admin.json staat in git. Dit bevat runtime login-instellingen en mag niet worden gedeployed vanuit development.');
     } else {
-        $add($warnings, 'storage/admin.php bestaat lokaal. Upload dit runtime loginbestand niet vanuit development.');
+        $add($warnings, 'storage/admin.json bestaat lokaal. Upload dit runtime loginbestand niet vanuit development.');
+    }
+}
+
+if (is_file(admin_legacy_settings_path())) {
+    if ($pathIsGitTracked('storage/admin.php')) {
+        $add($errors, 'storage/admin.php staat in git. Dit legacy PHP-loginbestand mag niet worden gedeployed.');
+    } else {
+        $add($warnings, 'Legacy storage/admin.php bestaat lokaal. Laat productie opnieuw naar storage/admin.json schrijven en upload dit PHP-bestand niet.');
     }
 }
 

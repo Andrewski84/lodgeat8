@@ -1,3 +1,10 @@
+#
+# Runtime storage is private.
+#
+# JSON content, contact submissions, admin credentials, reset tokens, locks and
+# logs may live below storage/. PHP code reads them server-side; browsers should
+# never download them directly.
+#
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

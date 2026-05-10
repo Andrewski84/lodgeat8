@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Slab:wght@700&family=Quicksand:wght@700&display=swap');
 
+/*
+ * Public site stylesheet.
+ *
+ * The public UI is built around one shared page shell: fixed header, rotating
+ * decorative backgrounds, a central content sheet, optional media column,
+ * gallery/lightbox controls and responsive footer/navigation. Variables here
+ * keep brand colors and animation timings consistent across those pieces.
+ */
+
 :root {
     --accent: #c40079;
     --black: #000;
@@ -781,6 +790,11 @@ address {
     color: var(--text);
     font-size: 15px;
     font-weight: 400;
+}
+
+.contact-form input.field-invalid {
+    border-color: #e74c3c;
+    background-color: #fadbd8;
 }
 
 .contact-form textarea {

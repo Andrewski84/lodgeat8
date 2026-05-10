@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Lodging at 8 is een Bed & Breakfast in Leuven, in een karaktervol huis uit 1918.">
     <title><?= e($page['title']) ?> | <?= e($config['site']['name']) ?></title>
-    <?php $siteFavicon = trim((string) ($config['site']['favicon'] ?? '')); ?>
+    <?php
+    // Favicon and gallery references come from editable JSON, so resolve them
+    // through helper functions before putting them into public markup.
+    $siteFavicon = trim((string) ($config['site']['favicon'] ?? ''));
+    ?>
     <?php if ($siteFavicon !== ''): ?>
         <link rel="icon" href="<?= e(image_path($siteFavicon)) ?>">
     <?php endif; ?>
@@ -15,6 +19,8 @@
     <?php require __DIR__ . '/partials/backgrounds.php'; ?>
     <?php require __DIR__ . '/partials/header.php'; ?>
     <?php
+    // Room pages share the same shell as regular pages, but their extra info
+    // and gallery need a wider layout region below the main content columns.
     $isRoomPage = ($page['type'] ?? '') === 'room' && isset($page['room']) && is_array($page['room']);
     $roomExtraInfo = [];
 

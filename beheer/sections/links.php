@@ -1,4 +1,13 @@
-<?php $page = $config['pages']['links']; ?>
+<?php
+/*
+ * Links admin section.
+ *
+ * The public links page stores grouped link columns. The admin UI edits those
+ * as named sections with rows, then converts them back to the public JSON model
+ * during save.
+ */
+$page = $config['pages']['links'];
+?>
 <section class="admin-panel">
     <div class="panel-head">
         <div>

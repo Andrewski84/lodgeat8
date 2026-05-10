@@ -1,3 +1,9 @@
+#
+# Admin section templates are private.
+#
+# The authenticated admin controller chooses these files after CSRF/session
+# checks; direct browser access would bypass that request flow.
+#
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

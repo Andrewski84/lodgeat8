@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Public rendering helpers.
+ *
+ * Templates use these functions to render rich text, translated values,
+ * booking widgets and maps consistently. Editable JSON content is normalized
+ * here before reaching the browser so templates do not need to trust raw
+ * admin-entered HTML or pasted embed snippets.
+ */
+
 function render_intro(array $paragraphs): void
 {
     foreach ($paragraphs as $paragraph) {

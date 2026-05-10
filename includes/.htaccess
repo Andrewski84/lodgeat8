@@ -1,3 +1,9 @@
+#
+# Shared PHP includes are private implementation files.
+#
+# They are loaded by index.php and beheer/index.php, not requested directly by
+# browsers.
+#
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

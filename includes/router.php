@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Public route resolver.
+ *
+ * Routes are content keys, not physical files. This keeps URLs stable while
+ * letting the admin edit page and room data stored in JSON. Unknown routes
+ * render the home page content with a 404 status so visitors get a friendly
+ * fallback while crawlers still receive the correct HTTP signal.
+ */
+
 function requested_page_key(): string
 {
     // Routes are stored as simple content keys, so keep the incoming value

@@ -91,13 +91,13 @@
             "en": {
                 "title": "Leuven",
                 "intro": [
-                    "Louvain (Leuven) has a lot to offer: theatre, dance, expositions, music and film – for instance in the Comtemporary Arts Centre ‘STUK‘,the beguinage, a variety of beautiful churches,the old market square ‘Oude Markt’with its many pubs, cafés and restaurants, and of course the main square ‘Grote Markt’ with its famous high gothic town hall.",
+                    "Louvain (Leuven) has a lot to offer: theatre, dance, expositions, music and film – for instance in the Contemporary Arts Centre ‘STUK’, the beguinage, a variety of beautiful churches, the old market square ‘Oude Markt’ with its many pubs, cafés and restaurants, and of course the main square ‘Grote Markt’ with its famous high gothic town hall.",
                     "A city stuffed with universities is your best guarantee for a lively nightlife …",
-                    "The local cuisine is renowned,restaurants ranging from low-budget to more exquisite and sophisticated.",
+                    "The local cuisine is renowned, with restaurants ranging from low-budget to more exquisite and sophisticated.",
                     "Mingle with the locals and find out for yourself!",
-                    "Visit the official website of Louvain to learn more about city walks, guided tours, must -sees and the cultural agenda.",
+                    "Visit the official website of Louvain to learn more about city walks, guided tours, must-sees and the cultural agenda.",
                     "www.leuven.be",
-                    "Louvain, probably Belgium’s best kept secret for an unforgetable time!"
+                    "Louvain, probably Belgium’s best kept secret for an unforgettable time!"
                 ]
             }
         }
@@ -138,7 +138,7 @@
     "contact": {
         "title": "contact",
         "type": "contact",
-        "contact_form_enabled": false,
+        "contact_form_enabled": true,
         "translations": {
             "nl": {
                 "title": "Contact",

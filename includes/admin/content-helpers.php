@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin content normalization helpers.
+ *
+ * The admin UI edits a friendlier form shape than the public JSON model. These
+ * helpers convert between translated values, line lists, rich-text snippets,
+ * link sections, media lists and background-display settings while keeping the
+ * stored JSON predictable.
+ */
+
 function admin_translated_value(array $item, string $field, string $language, $fallback = '')
 {
     if (isset($item['translations'][$language]) && array_key_exists($field, $item['translations'][$language])) {
@@ -104,6 +113,8 @@ function admin_sanitize_plain_lines($value): array
 
 function admin_sanitize_rich_text(string $html): string
 {
+    // Reuse the public rich-text sanitizer so admin saves and public rendering
+    // agree on the same allowed HTML subset.
     $html = trim($html);
 
     if ($html === '') {

@@ -1,6 +1,19 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Public contact form handling.
+ *
+ * The form always keeps a JSON copy of messages in storage/contact-messages.json
+ * and then attempts email delivery through the shared mail helper. Email can
+ * fail on some hosting plans, so the JSON file is the reliable local record.
+ *
+ * Runtime defenses live here as well: session-backed CSRF, a hidden honeypot,
+ * minimum submit-time validation and per-IP rate limiting. On validation errors
+ * the visitor's values are kept; after successful submission they are cleared
+ * so the rendered form returns empty.
+ */
+
 function contact_messages_path(): string
 {
     return storage_path('contact-messages.json');
@@ -13,6 +26,10 @@ function contact_rate_limit_path(): string
 
 function contact_prepare_runtime(): void
 {
+    /*
+     * The public form uses its own session name so visitor-facing CSRF state is
+     * isolated from admin authentication state.
+     */
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
@@ -79,15 +96,21 @@ function contact_empty_result(): array
         'submitted' => false,
         'success' => false,
         'errors' => [],
-        'values' => [
-            'name' => '',
-            'email' => '',
-            'phone' => '',
-            'subject' => '',
-            'message' => '',
-        ],
+        'values' => contact_empty_values(),
         'csrf_token' => '',
         'form_started_at' => 0,
+        'phone_invalid' => false,
+    ];
+}
+
+function contact_empty_values(): array
+{
+    return [
+        'name' => '',
+        'email' => '',
+        'phone' => '',
+        'subject' => '',
+        'message' => '',
     ];
 }
 
@@ -96,55 +119,84 @@ function contact_clean_line(string $value): string
     return trim(str_replace(["\r", "\n"], ' ', $value));
 }
 
+function contact_max_lengths(): array
+{
+    return [
+        'name' => 120,
+        'email' => 254,
+        'phone' => 60,
+        'subject' => 160,
+        'message' => 5000,
+        'user_agent' => 500,
+        'referer' => 500,
+    ];
+}
+
+function contact_max_length(string $field): int
+{
+    $lengths = contact_max_lengths();
+
+    return (int) ($lengths[$field] ?? 500);
+}
+
+function contact_strlen(string $value): int
+{
+    return function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
+}
+
+function contact_substr(string $value, int $length): string
+{
+    return function_exists('mb_substr') ? mb_substr($value, 0, $length) : substr($value, 0, $length);
+}
+
+function contact_truncate(string $value, int $length): string
+{
+    return contact_strlen($value) > $length ? contact_substr($value, $length) : $value;
+}
+
 function contact_client_ip(): string
 {
-    $ip = trim((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+    /*
+     * Check trusted proxy headers if available, otherwise fall back to REMOTE_ADDR.
+     * This handles load balancers and CDN scenarios (e.g., Cloudflare, AWS ALB).
+     */
+    $ip = '';
 
-    return $ip === '' ? 'unknown' : $ip;
+    // Cloudflare
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $ip = trim((string) $_SERVER['HTTP_CF_CONNECTING_IP']);
+    }
+    // Standard X-Forwarded-For (first IP in list)
+    elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $forwarded = trim((string) $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ips = array_map('trim', explode(',', $forwarded));
+        $ip = $ips[0] ?? '';
+    }
+    // X-Real-IP (nginx proxy)
+    elseif (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+        $ip = trim((string) $_SERVER['HTTP_X_REAL_IP']);
+    }
+    // Direct connection
+    elseif (!empty($_SERVER['REMOTE_ADDR'])) {
+        $ip = trim((string) $_SERVER['REMOTE_ADDR']);
+    }
+
+    // Basic validation: ensure it looks like an IP
+    if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) {
+        return $ip;
+    }
+
+    return 'unknown';
 }
 
 function contact_read_rate_limit(): array
 {
-    $path = contact_rate_limit_path();
-
-    if (!is_file($path)) {
-        return [];
-    }
-
-    $json = file_get_contents($path);
-    $data = json_decode((string) $json, true);
-
-    return is_array($data) ? $data : [];
+    return app_read_json_file(contact_rate_limit_path(), []);
 }
 
 function contact_write_rate_limit(array $state): void
 {
-    if (!is_dir(storage_path())) {
-        if (!mkdir(storage_path(), 0775, true) && !is_dir(storage_path())) {
-            throw new RuntimeException('De opslagmap kon niet worden aangemaakt.');
-        }
-    }
-
-    $json = json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-    if ($json === false) {
-        throw new RuntimeException('De contactbeveiliging kon niet worden opgeslagen.');
-    }
-
-    $temporaryPath = contact_rate_limit_path() . '.tmp';
-
-    if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
-        throw new RuntimeException('De contactbeveiliging kon niet tijdelijk worden opgeslagen.');
-    }
-
-    if (!@rename($temporaryPath, contact_rate_limit_path())) {
-        if (!@copy($temporaryPath, contact_rate_limit_path())) {
-            @unlink($temporaryPath);
-            throw new RuntimeException('De contactbeveiliging kon niet definitief worden opgeslagen.');
-        }
-
-        @unlink($temporaryPath);
-    }
+    app_write_json_file(contact_rate_limit_path(), $state, 'De contactbeveiliging kon niet worden opgeslagen.');
 }
 
 function contact_rate_limit_max_per_hour(): int
@@ -185,62 +237,41 @@ function contact_rate_limit_wait_seconds(string $ip): int
 
 function contact_record_submission(string $ip): void
 {
-    $state = contact_read_rate_limit();
-    $state[$ip] = contact_pruned_timestamps((array) ($state[$ip] ?? []));
-    $state[$ip][] = time();
+    app_update_json_file(
+        contact_rate_limit_path(),
+        static function (array $state) use ($ip): array {
+            $state[$ip] = contact_pruned_timestamps((array) ($state[$ip] ?? []));
+            $state[$ip][] = time();
 
-    foreach ($state as $key => $timestamps) {
-        $pruned = contact_pruned_timestamps((array) $timestamps);
+            foreach ($state as $key => $timestamps) {
+                $pruned = contact_pruned_timestamps((array) $timestamps);
 
-        if ($pruned === []) {
-            unset($state[$key]);
-        } else {
-            $state[$key] = $pruned;
-        }
-    }
+                if ($pruned === []) {
+                    unset($state[$key]);
+                } else {
+                    $state[$key] = $pruned;
+                }
+            }
 
-    contact_write_rate_limit($state);
+            return $state;
+        },
+        [],
+        'De contactbeveiliging kon niet worden opgeslagen.'
+    );
 }
 
 function contact_store_message(array $message): void
 {
-    if (!is_dir(storage_path())) {
-        if (!mkdir(storage_path(), 0775, true) && !is_dir(storage_path())) {
-            throw new RuntimeException('De opslagmap kon niet worden aangemaakt.');
-        }
-    }
+    app_update_json_file(
+        contact_messages_path(),
+        static function (array $messages) use ($message): array {
+            $messages[] = $message;
 
-    $messages = [];
-    $path = contact_messages_path();
-
-    if (is_file($path)) {
-        $json = file_get_contents($path);
-        $decoded = json_decode((string) $json, true);
-        $messages = is_array($decoded) ? $decoded : [];
-    }
-
-    $messages[] = $message;
-    $json = json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-    if ($json === false) {
-        throw new RuntimeException('Het bericht kon niet naar JSON worden omgezet.');
-    }
-
-    // Store form submissions even when mail() is blocked by hosting.
-    $temporaryPath = $path . '.tmp';
-
-    if (file_put_contents($temporaryPath, $json . PHP_EOL, LOCK_EX) === false) {
-        throw new RuntimeException('Het bericht kon niet worden opgeslagen.');
-    }
-
-    if (!@rename($temporaryPath, $path)) {
-        if (!@copy($temporaryPath, $path)) {
-            @unlink($temporaryPath);
-            throw new RuntimeException('Het bericht kon niet definitief worden opgeslagen.');
-        }
-
-        @unlink($temporaryPath);
-    }
+            return $messages;
+        },
+        [],
+        'Het bericht kon niet worden opgeslagen.'
+    );
 }
 
 function contact_send_email(array $config, array $message): bool
@@ -264,6 +295,22 @@ function contact_send_email(array $config, array $message): bool
     return app_send_email($config, $to, $subject, $body, $from !== false ? $from : '');
 }
 
+function contact_validate_phone(string $phone): bool
+{
+    /*
+     * Basic phone validation: allow digits, spaces, hyphens, parentheses, and plus sign.
+     * Must be at least 5 characters (rough international minimum).
+     */
+    if (contact_strlen($phone) < 5) {
+        return false;
+    }
+
+    // Allow: +1-234-567-8900, (123) 456 7890, +33 1 23 45 67 89, etc.
+    $pattern = '/^[\d\s\-()+]+$/u';
+
+    return (bool) preg_match($pattern, $phone);
+}
+
 function contact_submission_min_seconds(): int
 {
     return 2;
@@ -271,6 +318,11 @@ function contact_submission_min_seconds(): int
 
 function handle_contact_submission(array $config, array $post): array
 {
+    /*
+     * Normalize all user-provided values into $result before validating. The
+     * template then receives one consistent shape for untouched forms, errors
+     * and successful submissions.
+     */
     contact_prepare_runtime();
 
     $result = contact_empty_result();
@@ -286,52 +338,91 @@ function handle_contact_submission(array $config, array $post): array
     // Honeypot field: real visitors never see it, simple spambots often fill it.
     if (trim((string) ($post['website'] ?? '')) !== '') {
         $result['success'] = true;
+        $result['values'] = contact_empty_values();
         contact_reset_form_runtime();
         return $result;
     }
 
+    /*
+     * Runtime errors must block delivery, but visible field errors should stay
+     * the most actionable feedback for visitors. A stale token combined with a
+     * bad field value is still rejected, and the hidden state is refreshed below.
+     */
+    $runtimeErrors = [];
+    $refreshRuntime = false;
     $postedToken = (string) ($post['csrf_token'] ?? '');
     $validToken = hash_equals(contact_csrf_token(), $postedToken);
 
     if (!$validToken) {
-        $result['errors'][] = 'Je sessie is verlopen. Herlaad de pagina en probeer opnieuw.';
+        $runtimeErrors[] = 'Je sessie is verlopen. Herlaad de pagina en probeer opnieuw.';
+        $refreshRuntime = true;
     }
 
     $startedAt = (int) ($post['form_started_at'] ?? 0);
     $expectedStartedAt = contact_form_started_at();
 
     if ($startedAt <= 0 || $startedAt !== $expectedStartedAt) {
-        $result['errors'][] = 'Kon de formulierstatus niet bevestigen. Herlaad de pagina en probeer opnieuw.';
+        $runtimeErrors[] = 'Kon de formulierstatus niet bevestigen. Herlaad de pagina en probeer opnieuw.';
+        $refreshRuntime = true;
     } elseif ((time() - $startedAt) < contact_submission_min_seconds()) {
-        $result['errors'][] = 'Het formulier werd te snel verzonden. Probeer opnieuw.';
+        $runtimeErrors[] = 'Het formulier werd te snel verzonden. Probeer opnieuw.';
     }
 
     $ip = contact_client_ip();
     $waitSeconds = contact_rate_limit_wait_seconds($ip);
 
     if ($waitSeconds > 0) {
-        $result['errors'][] = 'Je verstuurde recent al meerdere berichten. Wacht ' . $waitSeconds . ' seconden en probeer opnieuw.';
+        $runtimeErrors[] = 'Je verstuurde recent al meerdere berichten. Wacht ' . $waitSeconds . ' seconden en probeer opnieuw.';
     }
 
     if ($result['values']['name'] === '') {
         $result['errors'][] = 'Vul je naam in.';
+    } elseif (contact_strlen($result['values']['name']) > contact_max_length('name')) {
+        $result['errors'][] = 'Je naam is te lang. Gebruik maximum ' . contact_max_length('name') . ' tekens.';
     }
 
     if (!filter_var($result['values']['email'], FILTER_VALIDATE_EMAIL)) {
         $result['errors'][] = 'Vul een geldig e-mailadres in.';
+    } elseif (contact_strlen($result['values']['email']) > contact_max_length('email')) {
+        $result['errors'][] = 'Je e-mailadres is te lang.';
     }
 
     if ($result['values']['phone'] === '') {
         $result['errors'][] = 'Vul je telefoonnummer in.';
+    } elseif (contact_strlen($result['values']['phone']) > contact_max_length('phone')) {
+        $result['errors'][] = 'Je telefoonnummer is te lang. Gebruik maximum ' . contact_max_length('phone') . ' tekens.';
+    } elseif (!contact_validate_phone($result['values']['phone'])) {
+        // Invalid format: mark the field visually, but keep the message area quiet.
+        $result['phone_invalid'] = true;
+    }
+
+    if (contact_strlen($result['values']['subject']) > contact_max_length('subject')) {
+        $result['errors'][] = 'Je onderwerp is te lang. Gebruik maximum ' . contact_max_length('subject') . ' tekens.';
     }
 
     if ($result['values']['message'] === '') {
         $result['errors'][] = 'Vul je bericht in.';
-    } elseif (mb_strlen($result['values']['message']) > 5000) {
-        $result['errors'][] = 'Je bericht is te lang. Gebruik maximum 5000 tekens.';
+    } elseif (contact_strlen($result['values']['message']) > contact_max_length('message')) {
+        $result['errors'][] = 'Je bericht is te lang. Gebruik maximum ' . contact_max_length('message') . ' tekens.';
     }
 
-    if ($result['errors'] !== []) {
+    if ($result['errors'] !== [] || $result['phone_invalid']) {
+        // Keep submitted values on validation failures so visitors can fix only
+        // the fields that need attention.
+        if ($refreshRuntime) {
+            contact_reset_form_runtime();
+        }
+
+        return $result;
+    }
+
+    if ($runtimeErrors !== []) {
+        $result['errors'] = $runtimeErrors;
+
+        if ($refreshRuntime) {
+            contact_reset_form_runtime();
+        }
+
         return $result;
     }
 
@@ -339,16 +430,30 @@ function handle_contact_submission(array $config, array $post): array
         'id' => bin2hex(random_bytes(8)),
         'created_at' => date('c'),
         'ip' => $ip,
-        'user_agent' => (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''),
-        'referer' => (string) ($_SERVER['HTTP_REFERER'] ?? ''),
+        'user_agent' => contact_truncate((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), contact_max_length('user_agent')),
+        'referer' => contact_truncate((string) ($_SERVER['HTTP_REFERER'] ?? ''), contact_max_length('referer')),
         'email_sent' => false,
     ];
 
-    $message['email_sent'] = contact_send_email($config, $message);
+    $emailSent = contact_send_email($config, $message);
+    $message['email_sent'] = $emailSent;
     contact_store_message($message);
     contact_record_submission($ip);
     contact_reset_form_runtime();
     $result['success'] = true;
+
+    /*
+     * Email delivery is a best-effort attempt; message always saves locally in JSON.
+     * If email failed, log it for admin review but don't show error to visitor
+     * (message is safely stored). In production, consider logging to file or monitoring.
+     */
+    if (!$emailSent) {
+        error_log('Contact form email delivery failed for message ID: ' . $message['id']);
+    }
+
+    // After a confirmed save/email attempt, return an empty form for the next
+    // message. This is intentionally done after contact_store_message().
+    $result['values'] = contact_empty_values();
 
     return $result;
 }

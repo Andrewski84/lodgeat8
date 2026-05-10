@@ -1,3 +1,9 @@
+#
+# View templates are private implementation files.
+#
+# The public front controller selects and includes them after routing,
+# localization and security setup have already run.
+#
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

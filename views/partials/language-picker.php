@@ -1,4 +1,11 @@
 <?php
+/*
+ * Shared language picker.
+ *
+ * Callers can optionally set $languagePickerClass or $languagePickerLabel before
+ * including this partial. The variables are unset at the end so one include
+ * cannot accidentally affect the next picker on the same page.
+ */
 $languagePickerClass = trim('language-picker ' . (string) ($languagePickerClass ?? ''));
 $languagePickerLabel = (string) ($languagePickerLabel ?? 'Select language');
 ?>

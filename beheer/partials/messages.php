@@ -1,3 +1,12 @@
+<?php
+/*
+ * Admin toast messages.
+ *
+ * Success messages autohide through admin.js, while error messages remain until
+ * dismissed. Both stacks use the same markup so toast positioning and close
+ * behavior stay consistent.
+ */
+?>
 <?php if ($messages !== []): ?>
     <div class="message-stack is-toast" data-admin-toast data-admin-toast-autohide>
         <?php foreach ($messages as $message): ?>

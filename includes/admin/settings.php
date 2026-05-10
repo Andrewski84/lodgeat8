@@ -1,7 +1,21 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin settings storage.
+ *
+ * Current credentials live in storage/admin.json. A legacy storage/admin.php
+ * reader remains so older deployments can migrate automatically the first time
+ * the admin area loads. The writer always stores only the current JSON shape,
+ * which avoids carrying stale or sensitive legacy keys forward.
+ */
+
 function admin_settings_path(): string
+{
+    return storage_path('admin.json');
+}
+
+function admin_legacy_settings_path(): string
 {
     return storage_path('admin.php');
 }
@@ -17,17 +31,24 @@ function admin_default_settings(): array
 
 function admin_settings(): array
 {
+    /*
+     * Prefer JSON settings. If that file does not exist yet, attempt a one-time
+     * read from the old PHP settings file and immediately write the JSON file so
+     * future requests no longer need to parse legacy content.
+     */
     $path = admin_settings_path();
     $defaults = admin_default_settings();
+    $loadedLegacySettings = false;
 
-    if (!is_file($path)) {
-        return $defaults;
-    }
-
-    $settings = require $path;
+    $settings = app_read_json_file($path, $defaults);
 
     if (!is_array($settings)) {
         return $defaults;
+    }
+
+    if ($settings === $defaults && !is_file($path)) {
+        $settings = admin_legacy_settings();
+        $loadedLegacySettings = $settings !== $defaults;
     }
 
     foreach ($defaults as $key => $value) {
@@ -36,33 +57,84 @@ function admin_settings(): array
         }
     }
 
+    if ($loadedLegacySettings && ((string) ($settings['username'] ?? '') !== '' || (string) ($settings['password_hash'] ?? '') !== '')) {
+        try {
+            admin_write_settings($settings);
+        } catch (Throwable $exception) {
+            if (function_exists('app_log_exception')) {
+                app_log_exception($exception, 'admin settings migration');
+            }
+        }
+    }
+
     return $settings;
+}
+
+function admin_legacy_export_string(string $source, string $key): string
+{
+    $quotedKey = preg_quote($key, '/');
+
+    if (preg_match("/['\"]{$quotedKey}['\"]\\s*=>\\s*'((?:\\\\.|[^'])*)'/", $source, $matches) !== 1) {
+        return '';
+    }
+
+    return stripcslashes($matches[1]);
+}
+
+function admin_legacy_export_nullable_string(string $source, string $key)
+{
+    $quotedKey = preg_quote($key, '/');
+
+    if (preg_match("/['\"]{$quotedKey}['\"]\\s*=>\\s*NULL/i", $source) === 1) {
+        return null;
+    }
+
+    $value = admin_legacy_export_string($source, $key);
+
+    return $value === '' ? null : $value;
+}
+
+function admin_legacy_settings(): array
+{
+    /*
+     * Do not require the legacy PHP file. It may contain arbitrary PHP syntax
+     * from an older deployment, so parse only the known exported string keys we
+     * need for migration.
+     */
+    $path = admin_legacy_settings_path();
+    $defaults = admin_default_settings();
+
+    if (!is_file($path)) {
+        return $defaults;
+    }
+
+    $source = file_get_contents($path);
+
+    if (!is_string($source)) {
+        return $defaults;
+    }
+
+    $settings = [
+        'username' => admin_legacy_export_string($source, 'username'),
+        'password_hash' => admin_legacy_export_string($source, 'password_hash'),
+        'password_updated_at' => admin_legacy_export_nullable_string($source, 'password_updated_at'),
+    ];
+
+    return array_merge($defaults, array_filter(
+        $settings,
+        static function ($value): bool {
+            return $value !== '';
+        }
+    ));
 }
 
 function admin_write_settings(array $settings): void
 {
-    if (!is_dir(storage_path())) {
-        if (!mkdir(storage_path(), 0775, true) && !is_dir(storage_path())) {
-            throw new RuntimeException('De opslagmap kon niet worden aangemaakt.');
-        }
-    }
-
-    $export = var_export($settings, true);
-    $temporaryPath = admin_settings_path() . '.tmp';
-    $payload = "<?php\nreturn {$export};\n";
-
-    if (file_put_contents($temporaryPath, $payload, LOCK_EX) === false) {
-        throw new RuntimeException('De beheerinstellingen konden niet worden opgeslagen.');
-    }
-
-    if (!@rename($temporaryPath, admin_settings_path())) {
-        if (!@copy($temporaryPath, admin_settings_path())) {
-            @unlink($temporaryPath);
-            throw new RuntimeException('De beheerinstellingen konden niet definitief worden opgeslagen.');
-        }
-
-        @unlink($temporaryPath);
-    }
+    app_write_json_file(
+        admin_settings_path(),
+        array_intersect_key($settings, admin_default_settings()),
+        'De beheerinstellingen konden niet worden opgeslagen.'
+    );
 }
 
 function admin_is_configured(): bool

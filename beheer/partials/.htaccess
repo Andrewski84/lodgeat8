@@ -1,3 +1,9 @@
+#
+# Admin partial templates are private.
+#
+# They are included by the authenticated admin shell and should not be reachable
+# as standalone browser resources.
+#
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

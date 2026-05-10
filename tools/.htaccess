@@ -1,3 +1,9 @@
+#
+# Maintenance tools are CLI-only.
+#
+# Deployment checks should be run from the command line and must not be exposed
+# as public web endpoints.
+#
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

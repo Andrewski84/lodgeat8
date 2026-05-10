@@ -1,4 +1,12 @@
 <?php
+/*
+ * Booking widget partial.
+ *
+ * The admin can provide either a structured booking-engine action or a fallback
+ * URL. When structured settings are available, JavaScript converts the visible
+ * browser-native date inputs into the query parameters expected by the booking
+ * provider.
+ */
 $bookingWidget = booking_widget_settings($config);
 $bookingAction = booking_widget_action($bookingWidget);
 $bookingLanguage = booking_widget_language($bookingWidget);

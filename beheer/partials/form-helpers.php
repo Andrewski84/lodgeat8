@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin form rendering helpers.
+ *
+ * These functions emit repeated admin UI fragments such as hidden CSRF/action
+ * fields, language tabs, rich text fields, link editors and photo grids. The
+ * goal is to keep section templates readable while preserving one consistent
+ * markup contract for assets/js/admin.js.
+ */
+
 function beheer_hidden_fields(string $csrfToken, string $section, string $action): void
 {
     ?>

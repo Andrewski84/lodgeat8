@@ -1,3 +1,12 @@
+<?php
+/*
+ * Full-page background carousel.
+ *
+ * Background definitions are filtered by page, normalized for display mode and
+ * rendered as decorative slides. The JavaScript rotates these independently
+ * from the content gallery/lightbox.
+ */
+?>
 <div class="background-slides" aria-hidden="true">
     <?php foreach (background_items_for_display((array) $config['backgrounds'], $pageKey) as $index => $background): ?>
         <?php $backgroundFile = (string) ($background['file'] ?? ''); ?>

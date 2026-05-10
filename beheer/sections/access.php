@@ -1,3 +1,12 @@
+<?php
+/*
+ * Admin access section.
+ *
+ * This screen updates the admin login email/password and can generate a
+ * one-time reset link. Reset links are operational tools, so they are shown
+ * only immediately after generation and are not stored in the HTML later.
+ */
+?>
 <section class="admin-panel">
     <div class="panel-head">
         <div>

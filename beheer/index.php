@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin front controller and shell template.
+ *
+ * The controller builds $adminState, then this file renders either setup,
+ * password reset, login, or the authenticated admin workspace. Keeping the
+ * shell in one file makes shared assets, CSRF meta data and session timeout
+ * configuration consistent across every admin section.
+ */
 require dirname(__DIR__) . '/includes/bootstrap.php';
 require_once base_path('includes/admin.php');
 require_once __DIR__ . '/admin-controller.php';
@@ -17,8 +25,6 @@ $csrfToken = $adminState['csrfToken'];
 $adminUsername = $adminState['adminUsername'];
 $requestedResetEmail = $adminState['requestedResetEmail'];
 $bookingWidget = $adminState['bookingWidget'];
-$mailSettings = $adminState['mailSettings'];
-$mailPasswordSet = $adminState['mailPasswordSet'];
 $sessionTimeoutSeconds = $adminState['sessionTimeoutSeconds'];
 $siteLogo = $adminState['siteLogo'];
 $siteFavicon = $adminState['siteFavicon'];

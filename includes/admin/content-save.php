@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin content save routines.
+ *
+ * Functions in this file translate posted form fields into validated content
+ * arrays. They do not write to disk directly; the controller is responsible for
+ * persistence so it can combine content changes with media reference cleanup.
+ */
+
 function admin_validate_optional_url(string $value, string $label): void
 {
     if ($value !== '' && !is_safe_web_url($value)) {
@@ -40,6 +48,12 @@ function admin_content_key_from_post(string $value, string $fallback): string
 
 function admin_save_general(array $content, array $post, array $files = []): array
 {
+    /*
+     * General settings mix plain site fields, logo/favicon uploads, homepage
+     * background photos and booking-widget configuration. Media deletions are
+     * queued instead of performed immediately so the controller can save JSON
+     * first and only delete files that are no longer referenced.
+     */
     $editableSiteFields = [
         'name',
         'reservation_url',
@@ -131,6 +145,10 @@ function admin_save_general(array $content, array $post, array $files = []): arr
 
 function admin_save_page_content(array $content, string $pageKey, array $post, array $files = []): array
 {
+    /*
+     * Page saves handle translated page text plus optional page-specific data
+     * such as the contact-form toggle, Google Maps embed URL and page gallery.
+     */
     if (!isset($content['pages'][$pageKey])) {
         return $content;
     }
@@ -185,6 +203,10 @@ function admin_save_page_content(array $content, string $pageKey, array $post, a
 
 function admin_save_room_content(array $content, string $roomKey, array $post, array $files = []): array
 {
+    /*
+     * Room saves keep the room itself and its gallery aligned. The first gallery
+     * image becomes the room card image used by public room teasers.
+     */
     if (!isset($content['rooms'][$roomKey])) {
         return $content;
     }

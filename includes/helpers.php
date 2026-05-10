@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Shared presentation helpers.
+ *
+ * Public templates and admin templates both use these helpers for escaping,
+ * asset paths, safe URL checks, language wrappers, galleries and background
+ * image normalization. Keeping that logic here prevents subtle differences
+ * between public rendering and admin previews.
+ */
+
 function e($value): string
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');

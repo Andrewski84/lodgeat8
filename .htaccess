@@ -1,3 +1,10 @@
+#
+# Public web-root rules.
+#
+# index.php is the front controller, and UTF-8 is the expected encoding for the
+# multilingual site. Markdown and log files are blocked from direct download so
+# operational notes or runtime logs are not exposed if they exist in production.
+#
 DirectoryIndex index.php
 AddDefaultCharset UTF-8
 

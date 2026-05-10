@@ -1,3 +1,12 @@
+/*
+ * Admin UI interactions.
+ *
+ * The admin pages are server-rendered forms with progressive enhancements for
+ * unsaved-change guards, AJAX photo autosave, rich-text editing, link modals,
+ * logo previews, image resizing and background focus selection. The markup
+ * contract comes from beheer/partials/form-helpers.php.
+ */
+
 const photoRequests = new WeakMap();
 const photoSaveTimers = new WeakMap();
 const photoHideTimers = new WeakMap();
@@ -1381,49 +1390,6 @@ if (linkModal && linkForm && linkInput && linkText) {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !linkModal.hidden) {
             closeLinkModal();
-        }
-    });
-}
-
-const technicalModal = document.querySelector('[data-technical-modal]');
-const technicalModalOpen = document.querySelector('[data-technical-modal-open]');
-const technicalHelpToggle = document.querySelector('[data-technical-help-toggle]');
-const technicalHelp = document.querySelector('[data-technical-help]');
-
-const closeTechnicalModal = () => {
-    if (!technicalModal) {
-        return;
-    }
-
-    technicalModal.hidden = true;
-    document.body.classList.remove('has-technical-modal');
-};
-
-if (technicalModal && technicalModalOpen) {
-    technicalModalOpen.addEventListener('click', () => {
-        technicalModal.hidden = false;
-        document.body.classList.add('has-technical-modal');
-        technicalModal.querySelector('form input, form select, form textarea, form button')?.focus();
-    });
-
-    technicalHelpToggle?.addEventListener('click', () => {
-        if (!technicalHelp) {
-            return;
-        }
-
-        const isOpening = technicalHelp.hidden;
-
-        technicalHelp.hidden = !isOpening;
-        technicalHelpToggle.setAttribute('aria-expanded', String(isOpening));
-    });
-
-    technicalModal.querySelectorAll('[data-technical-modal-close]').forEach((element) => {
-        element.addEventListener('click', closeTechnicalModal);
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && !technicalModal.hidden) {
-            closeTechnicalModal();
         }
     });
 }

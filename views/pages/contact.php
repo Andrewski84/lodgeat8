@@ -1,4 +1,12 @@
 <?php
+/*
+ * Contact page template.
+ *
+ * Contact details are assembled from site-level JSON fields, then the public
+ * form renders the state produced by includes/contact.php. On validation errors
+ * values stay in $contactResult['values']; after successful submission that
+ * array is intentionally empty so visitors see a fresh form.
+ */
 $contactDetails = [];
 $contactOwner = trim((string) ($config['site']['owner'] ?? ''));
 $contactCompany = trim((string) ($config['site']['company'] ?? ''));
@@ -61,11 +69,11 @@ if ($contactIban !== '') {
         <input type="hidden" name="csrf_token" value="<?= e((string) ($contactResult['csrf_token'] ?? '')) ?>">
         <input type="hidden" name="form_started_at" value="<?= e((string) ($contactResult['form_started_at'] ?? 0)) ?>">
         <label class="form-trap">Website <input name="website" tabindex="-1" autocomplete="off"></label>
-        <label><?= e(ui_text('form_name')) ?> <input required name="name" autocomplete="name" value="<?= e($contactResult['values']['name']) ?>"></label>
-        <label><?= e(ui_text('form_email')) ?> <input required type="email" name="email" autocomplete="email" value="<?= e($contactResult['values']['email']) ?>"></label>
-        <label><?= e(ui_text('form_phone')) ?> <input required name="phone" autocomplete="tel" value="<?= e($contactResult['values']['phone']) ?>"></label>
-        <label><?= e(ui_text('form_subject')) ?> <input name="subject" value="<?= e($contactResult['values']['subject']) ?>"></label>
-        <label class="wide"><?= e(ui_text('form_message')) ?> <textarea required name="message" rows="6"><?= e($contactResult['values']['message']) ?></textarea></label>
+        <label><?= e(ui_text('form_name')) ?> <input required name="name" autocomplete="name" maxlength="<?= e((string) contact_max_length('name')) ?>" value="<?= e($contactResult['values']['name']) ?>"></label>
+        <label><?= e(ui_text('form_email')) ?> <input required type="email" name="email" autocomplete="email" maxlength="<?= e((string) contact_max_length('email')) ?>" value="<?= e($contactResult['values']['email']) ?>"></label>
+        <label><?= e(ui_text('form_phone')) ?> <input required name="phone" autocomplete="tel" maxlength="<?= e((string) contact_max_length('phone')) ?>" value="<?= e($contactResult['values']['phone']) ?>" <?= ($contactResult['phone_invalid'] ?? false) ? 'class="field-invalid" aria-invalid="true"' : '' ?>></label>
+        <label><?= e(ui_text('form_subject')) ?> <input name="subject" maxlength="<?= e((string) contact_max_length('subject')) ?>" value="<?= e($contactResult['values']['subject']) ?>"></label>
+        <label class="wide"><?= e(ui_text('form_message')) ?> <textarea required name="message" rows="6" maxlength="<?= e((string) contact_max_length('message')) ?>"><?= e($contactResult['values']['message']) ?></textarea></label>
         <button type="submit"><?= e(ui_text('form_send')) ?></button>
     </form>
 <?php endif; ?>

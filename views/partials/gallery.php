@@ -1,3 +1,12 @@
+<?php
+/*
+ * Page gallery partial.
+ *
+ * The gallery receives already-filtered media items from the layout. Buttons
+ * are used instead of plain images so the same markup can drive the lightbox
+ * without adding separate clickable wrappers.
+ */
+?>
 <section class="gallery" data-gallery>
     <div class="gallery-frame">
         <?php foreach ($gallery as $index => $item): ?>

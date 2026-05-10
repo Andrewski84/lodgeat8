@@ -1,4 +1,12 @@
-<?php $room = $config['rooms'][$section]; ?>
+<?php
+/*
+ * Room admin section.
+ *
+ * Each room uses the same multilingual field set and its own gallery. Saving a
+ * room also refreshes the room card image from the first gallery item.
+ */
+$room = $config['rooms'][$section];
+?>
 <section class="admin-panel">
     <div class="panel-head">
         <div>

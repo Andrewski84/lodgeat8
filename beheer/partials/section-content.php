@@ -1,7 +1,13 @@
 <?php
 declare(strict_types=1);
 
-// Keep the section router thin: each section has its own partial in /sections.
+/*
+ * Admin section template router.
+ *
+ * The sidebar section key is intentionally mapped to a small set of physical
+ * templates. Public pages and rooms reuse generic editors, while contact,
+ * links, general settings and access each get their own focused partial.
+ */
 $sectionTemplate = null;
 
 if ($section === 'algemeen') {

@@ -1,3 +1,12 @@
+<?php
+/*
+ * Public footer partial.
+ *
+ * The footer repeats a compact navigation set and reuses the same language
+ * picker component as the header. Footer labels are localized from content so
+ * editors can change navigation text without touching this template.
+ */
+?>
 <footer class="site-footer">
     <div class="site-footer-shell">
         <nav class="site-footer-nav">

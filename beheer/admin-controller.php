@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin request controller.
+ *
+ * This file turns one admin HTTP request into a state array for beheer/index.php.
+ * It owns form action dispatch, CSRF enforcement, login/setup/reset flows,
+ * content saves, AJAX responses and flash messages. Section templates should
+ * stay mostly presentational; security and persistence decisions belong here.
+ */
+
 function admin_append_deletion_message(array &$messages, array $deletionResult): void
 {
     $deletedImages = $deletionResult['deleted'] ?? [];
@@ -19,7 +28,7 @@ function admin_append_deletion_message(array &$messages, array $deletionResult):
     }
 }
 
-function admin_save_content_with_media_deletions(array &$config, array &$messages, string $successMessage): void
+function admin_save_content_with_media_deletions(array $originalConfig, array &$config, array &$messages, string $successMessage): void
 {
     $mediaDeletions = admin_take_media_deletions();
     $mediaReferenceRemovals = admin_take_media_reference_removals();
@@ -28,12 +37,43 @@ function admin_save_content_with_media_deletions(array &$config, array &$message
         admin_remove_media_references($config, $mediaReferenceRemovals);
     }
 
-    save_content($config);
+    $config = save_content_changes($originalConfig, $config);
     $messages[] = $successMessage;
 
     if ($mediaDeletions !== []) {
         admin_append_deletion_message($messages, admin_delete_unreferenced_media($mediaDeletions, $config));
     }
+}
+
+function admin_public_exception_message(Throwable $exception): string
+{
+    /*
+     * Admin actions can throw technical filesystem or upload exceptions. Show
+     * specific validation messages when they are safe, but hide server paths and
+     * stack details from the browser.
+     */
+    $message = trim($exception->getMessage());
+
+    if ($message === '') {
+        return 'De actie kon niet worden uitgevoerd. Probeer opnieuw.';
+    }
+
+    if (preg_match('#([a-z]:\\\\|\\\\Users\\\\|/home/|/var/|/srv/|/www/|Stack trace| on line \d+)#i', $message) === 1) {
+        return 'De actie kon niet worden uitgevoerd. Probeer opnieuw.';
+    }
+
+    return $message;
+}
+
+function admin_audit_log(string $event, array $context = []): void
+{
+    $username = admin_username();
+
+    if ($username !== '') {
+        $context['admin_user'] = hash('sha256', $username);
+    }
+
+    app_log_message('audit', 'admin ' . $event, $context);
 }
 
 function admin_is_ajax_request(): bool
@@ -108,6 +148,11 @@ function admin_queue_flash_messages(array $messages): void
 
 function admin_redirect_after_save_url(string $target): string
 {
+    /*
+     * Save bars can ask the controller to continue navigation after a form is
+     * saved. Only same-host admin section URLs are accepted, so a crafted form
+     * cannot turn this into an open redirect.
+     */
     $target = trim(html_entity_decode($target, ENT_QUOTES, 'UTF-8'));
 
     if ($target === '') {
@@ -164,7 +209,6 @@ function admin_action_allows_redirect_after_save(string $action): bool
     return in_array($action, [
         'save-credentials',
         'save-general',
-        'save-mail-settings',
         'save-page',
         'save-room',
         'save-links',
@@ -180,6 +224,11 @@ function admin_wait_message(int $seconds): string
 
 function admin_controller_state(array $config): array
 {
+    /*
+     * The returned array is the single source of truth for the admin template:
+     * current content, authentication state, messages, current section and
+     * per-request tokens all flow through this structure.
+     */
     admin_prepare_runtime();
 
     $messages = admin_pull_flash_messages();
@@ -191,6 +240,7 @@ function admin_controller_state(array $config): array
     $resetToken = admin_reset_token_from_query($_GET['reset'] ?? '');
 
     if (isset($_GET['logout'])) {
+        admin_audit_log('logout');
         admin_logout();
         header('Location: index.php');
         exit;
@@ -319,27 +369,37 @@ function admin_controller_state(array $config): array
                 $generatedResetLink = admin_generate_password_reset_link();
                 $messages[] = 'Nieuwe resetlink aangemaakt. Deze link verloopt na ' . admin_password_reset_expires_minutes() . ' minuten.';
             } elseif ($action === 'save-general') {
+                $originalConfig = $config;
                 $config = admin_save_general($config, $_POST, $_FILES);
-                admin_save_content_with_media_deletions($config, $messages, 'Algemene instellingen zijn bewaard.');
-            } elseif ($action === 'save-mail-settings') {
-                app_save_mail_settings_from_post($_POST);
-                $messages[] = 'Technische mailinstellingen zijn bewaard.';
+                admin_save_content_with_media_deletions($originalConfig, $config, $messages, 'Algemene instellingen zijn bewaard.');
             } elseif ($action === 'save-page') {
+                $originalConfig = $config;
                 $config = admin_save_page_content($config, (string) ($_POST['page_key'] ?? ''), $_POST, $_FILES);
-                admin_save_content_with_media_deletions($config, $messages, 'Pagina is bewaard.');
+                admin_save_content_with_media_deletions($originalConfig, $config, $messages, 'Pagina is bewaard.');
             } elseif ($action === 'save-room') {
+                $originalConfig = $config;
                 $config = admin_save_room_content($config, (string) ($_POST['room_key'] ?? ''), $_POST, $_FILES);
-                admin_save_content_with_media_deletions($config, $messages, 'Kamer is bewaard.');
+                admin_save_content_with_media_deletions($originalConfig, $config, $messages, 'Kamer is bewaard.');
             } elseif ($action === 'save-links') {
+                $originalConfig = $config;
                 $config = admin_save_links_content($config, $_POST);
-                save_content($config);
+                $config = save_content_changes($originalConfig, $config);
                 $messages[] = 'Links zijn bewaard.';
             } else {
                 $errors[] = 'Onbekende actie.';
             }
         } catch (Throwable $exception) {
             app_log_exception($exception, 'admin-controller action ' . $action);
-            $errors[] = $exception->getMessage();
+            $errors[] = admin_public_exception_message($exception);
+        }
+
+        if ($action !== '') {
+            admin_audit_log('post', [
+                'action' => preg_replace('/[^a-z0-9_-]/i', '', $action) ?: 'unknown',
+                'section' => $section,
+                'success' => $errors === [],
+                'ajax' => $isAjaxRequest,
+            ]);
         }
 
         if ($errors === [] && !$isAjaxRequest && admin_action_allows_redirect_after_save($action)) {
@@ -394,8 +454,6 @@ function admin_controller_state(array $config): array
         'adminUsername' => admin_username(),
         'requestedResetEmail' => $requestedResetEmail,
         'bookingWidget' => booking_widget_settings($config),
-        'mailSettings' => app_mail_settings(),
-        'mailPasswordSet' => app_mail_password_is_set(),
         'sessionTimeoutSeconds' => admin_session_timeout_seconds(),
         'siteLogo' => admin_safe_media_filename((string) ($config['site']['logo'] ?? '')),
         'siteFavicon' => admin_safe_media_filename((string) ($config['site']['favicon'] ?? '')),

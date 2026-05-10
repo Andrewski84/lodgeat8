@@ -1,4 +1,12 @@
 <?php
+/*
+ * Room detail template.
+ *
+ * Room data is localized before it reaches this template. The template only
+ * chooses which optional sections to display: summary, booking link, features
+ * and prices. Room gallery and extra information are handled by the shared
+ * layout so all room pages stay visually consistent.
+ */
 $room = $page['room'];
 $summary = trim((string) ($room['summary'] ?? ''));
 $features = isset($room['features']) && is_array($room['features']) ? array_filter($room['features']) : [];

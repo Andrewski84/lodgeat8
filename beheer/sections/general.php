@@ -1,3 +1,13 @@
+<?php
+/*
+ * General admin section.
+ *
+ * This editor owns site-wide identity fields, logo/favicon uploads, background
+ * photos and booking widget settings. The controller saves all of these through
+ * the same "save-general" action so related site-level changes are committed
+ * together.
+ */
+?>
 <section class="admin-panel">
     <div class="panel-head">
         <div>

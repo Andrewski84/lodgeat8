@@ -13,3 +13,6 @@ storage/password-reset-attempts.json
 storage/mail-settings.json
 storage/reset_tokens.json
 storage/admin.php
+storage/admin.json
+storage/*.lock
+storage/locks/

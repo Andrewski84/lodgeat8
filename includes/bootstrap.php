@@ -1,13 +1,31 @@
 <?php
 declare(strict_types=1);
 
-// Load language configuration first (required by helpers.php)
+/*
+ * Application bootstrap.
+ *
+ * This file is loaded before any public or admin page-specific logic. It wires
+ * together shared helper modules, sends security headers for browser requests,
+ * and loads JSON-backed content into $config.
+ *
+ * Ordering matters: language helpers must be available before generic helpers,
+ * content helpers before mail/contact/admin code, and security headers before
+ * templates produce output.
+ */
+
+// Load language configuration first because helpers.php exposes wrappers that
+// delegate to the language module.
 require_once __DIR__ . '/languages.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/content.php';
 
 function app_security_headers(): array
 {
+    /*
+     * Keep the policy strict while matching the current site:
+     * local scripts only, inline styles for existing templates/rich text,
+     * Google Fonts for typography, and Google Maps frames for the location page.
+     */
     return [
         'X-Frame-Options' => 'DENY',
         'X-Content-Type-Options' => 'nosniff',

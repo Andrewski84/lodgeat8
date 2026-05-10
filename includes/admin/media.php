@@ -1,6 +1,15 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Admin media management.
+ *
+ * Media paths stored in JSON are always relative to assets/img/. This module
+ * validates uploads, normalizes filenames, queues deletions, removes references
+ * from editable content and deletes physical files only after the saved content
+ * no longer points to them.
+ */
+
 function admin_collect_referenced_media(array $content): array
 {
     // Keep this collector conservative: files may be shared between pages, so
@@ -46,6 +55,13 @@ function admin_collect_referenced_media(array $content): array
 
 function admin_delete_unreferenced_media(array $files, array $content): array
 {
+    /*
+     * Physical deletes are deliberately cautious:
+     * - normalize every requested path;
+     * - compare against all JSON references;
+     * - resolve the real path under assets/img;
+     * - delete only regular files/links inside that directory.
+     */
     $referenced = admin_collect_referenced_media($content);
     $directory = realpath(base_path('assets/img'));
     $result = [
@@ -466,6 +482,150 @@ function admin_compress_large_jpeg(string $path): void
     @unlink($bestTemp);
 }
 
+function admin_uploaded_file_mime_type(string $path): string
+{
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+
+        if (is_string($mimeType) && $mimeType !== '') {
+            return strtolower($mimeType);
+        }
+    }
+
+    if (function_exists('mime_content_type')) {
+        $mimeType = mime_content_type($path);
+
+        if (is_string($mimeType) && $mimeType !== '') {
+            return strtolower($mimeType);
+        }
+    }
+
+    return '';
+}
+
+function admin_file_header(string $path, int $bytes = 16): string
+{
+    $handle = @fopen($path, 'rb');
+
+    if ($handle === false) {
+        return '';
+    }
+
+    try {
+        $header = fread($handle, $bytes);
+
+        return is_string($header) ? $header : '';
+    } finally {
+        fclose($handle);
+    }
+}
+
+function admin_image_header_matches_extension(string $path, string $extension): bool
+{
+    $header = admin_file_header($path, 16);
+
+    if ($header === '') {
+        return false;
+    }
+
+    if (in_array($extension, ['jpg', 'jpeg'], true)) {
+        return substr($header, 0, 3) === "\xFF\xD8\xFF";
+    }
+
+    if ($extension === 'png') {
+        return substr($header, 0, 8) === "\x89PNG\r\n\x1A\n";
+    }
+
+    if ($extension === 'gif') {
+        return in_array(substr($header, 0, 6), ['GIF87a', 'GIF89a'], true);
+    }
+
+    if ($extension === 'webp') {
+        return substr($header, 0, 4) === 'RIFF' && substr($header, 8, 4) === 'WEBP';
+    }
+
+    return false;
+}
+
+function admin_uploaded_file_contains_php_tag(string $path): bool
+{
+    $handle = @fopen($path, 'rb');
+
+    if ($handle === false) {
+        return true;
+    }
+
+    $tail = '';
+
+    try {
+        while (!feof($handle)) {
+            $chunk = fread($handle, 8192);
+
+            if (!is_string($chunk)) {
+                return true;
+            }
+
+            $scan = $tail . $chunk;
+
+            if (preg_match('/<\?(?:php|=|\s)/i', $scan) === 1) {
+                return true;
+            }
+
+            $tail = substr($scan, -8);
+        }
+    } finally {
+        fclose($handle);
+    }
+
+    return false;
+}
+
+function admin_validate_uploaded_image(string $temporaryName, string $extension, array $allowedMimeTypes): array
+{
+    /*
+     * Validate uploaded images before moving them into the public assets tree.
+     * Extension, file signature, detected MIME type and getimagesize() must all
+     * agree. Scanning for PHP tags adds defense in depth for hosts that might
+     * execute uploaded files despite the assets/img/.htaccess protection.
+     */
+    if (!is_uploaded_file($temporaryName)) {
+        throw new RuntimeException('Upload alleen geldige afbeeldingsbestanden.');
+    }
+
+    if (admin_uploaded_file_contains_php_tag($temporaryName)) {
+        throw new RuntimeException('Het bestand bevat geen toegestane afbeeldingsdata.');
+    }
+
+    if (!admin_image_header_matches_extension($temporaryName, $extension)) {
+        throw new RuntimeException('De bestandsextensie komt niet overeen met het afbeeldingsformaat.');
+    }
+
+    $detectedMimeType = admin_uploaded_file_mime_type($temporaryName);
+
+    if ($detectedMimeType === '') {
+        throw new RuntimeException('De server kan het MIME-type van de afbeelding niet controleren.');
+    }
+
+    if (!in_array($detectedMimeType, $allowedMimeTypes[$extension] ?? [], true)) {
+        throw new RuntimeException('De bestandsextensie komt niet overeen met het afbeeldingsformaat.');
+    }
+
+    $imageInfo = @getimagesize($temporaryName);
+
+    if ($imageInfo === false) {
+        throw new RuntimeException('Upload alleen geldige afbeeldingsbestanden.');
+    }
+
+    $imageMimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
+
+    if (!in_array($imageMimeType, $allowedMimeTypes[$extension] ?? [], true)) {
+        throw new RuntimeException('De bestandsextensie komt niet overeen met het afbeeldingsformaat.');
+    }
+
+    return $imageInfo;
+}
+
 function admin_upload_images(array $files, string $directory = ''): array
 {
     if (($files['name'] ?? []) === []) {
@@ -522,63 +682,93 @@ function admin_upload_images(array $files, string $directory = ''): array
         UPLOAD_ERR_EXTENSION => 'Een PHP-extensie heeft de upload gestopt.',
     ];
 
-    foreach ($names as $index => $originalName) {
-        if (($errors[$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            continue;
+    $fileLimit = admin_effective_upload_limit_bytes();
+    $createdTargets = [];
+
+    try {
+        app_with_file_lock(
+            app_named_lock_path('media-upload-' . ($relativeDirectory === '' ? 'root' : str_replace('/', '-', $relativeDirectory))),
+            static function () use (
+                $names,
+                $temporaryNames,
+                $errors,
+                $sizes,
+                $allowedMimeTypes,
+                $fileLimit,
+                $targetDirectory,
+                $relativeDirectory,
+                $errorMessages,
+                &$createdTargets,
+                &$uploaded
+            ): void {
+                foreach ($names as $index => $originalName) {
+                    if (($errors[$index] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+
+                    if (($errors[$index] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+                        throw new RuntimeException($errorMessages[$errors[$index]] ?? 'Een afbeelding kon niet worden geupload.');
+                    }
+
+                    $temporaryName = (string) ($temporaryNames[$index] ?? '');
+                    $fileSize = (int) ($sizes[$index] ?? 0);
+
+                    if ($fileLimit > 0 && $fileSize > $fileLimit) {
+                        throw new RuntimeException(admin_upload_limit_message($fileSize));
+                    }
+
+                    $extension = strtolower(pathinfo((string) $originalName, PATHINFO_EXTENSION));
+
+                    if (!array_key_exists($extension, $allowedMimeTypes)) {
+                        throw new RuntimeException('Alleen jpg, png, gif en webp zijn toegestaan.');
+                    }
+
+                    admin_validate_uploaded_image($temporaryName, $extension, $allowedMimeTypes);
+
+                    $baseName = strtolower(pathinfo((string) $originalName, PATHINFO_FILENAME));
+                    $baseName = trim((string) preg_replace('/[^a-z0-9-]+/', '-', $baseName), '-');
+                    $baseName = $baseName === '' ? 'afbeelding' : $baseName;
+                    $fileName = $baseName . '.' . $extension;
+                    $target = $targetDirectory . DIRECTORY_SEPARATOR . $fileName;
+                    $counter = 2;
+
+                    while (is_file($target)) {
+                        $fileName = $baseName . '-' . $counter . '.' . $extension;
+                        $target = $targetDirectory . DIRECTORY_SEPARATOR . $fileName;
+                        $counter++;
+                    }
+
+                    if (!move_uploaded_file($temporaryName, $target)) {
+                        throw new RuntimeException('De afbeelding kon niet worden opgeslagen.');
+                    }
+
+                    $createdTargets[] = $target;
+
+                    if (in_array($extension, ['jpg', 'jpeg'], true)) {
+                        admin_compress_large_jpeg($target);
+                    }
+
+                    $uploaded[] = $relativeDirectory === '' ? $fileName : $relativeDirectory . '/' . $fileName;
+                }
+            },
+            'De upload kon niet veilig worden verwerkt.'
+        );
+    } catch (Throwable $exception) {
+        foreach ($createdTargets as $target) {
+            if (is_file($target)) {
+                @unlink($target);
+            }
         }
 
-        if (($errors[$index] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-            throw new RuntimeException($errorMessages[$errors[$index]] ?? 'Een afbeelding kon niet worden geupload.');
+        foreach ($temporaryNames as $temporaryName) {
+            $temporaryName = (string) $temporaryName;
+
+            if ($temporaryName !== '' && is_uploaded_file($temporaryName)) {
+                @unlink($temporaryName);
+            }
         }
 
-        $temporaryName = (string) ($temporaryNames[$index] ?? '');
-        $fileSize = (int) ($sizes[$index] ?? 0);
-        $fileLimit = admin_effective_upload_limit_bytes();
-
-        if ($fileLimit > 0 && $fileSize > $fileLimit) {
-            throw new RuntimeException(admin_upload_limit_message($fileSize));
-        }
-
-        $imageInfo = @getimagesize($temporaryName);
-
-        if (!is_uploaded_file($temporaryName) || $imageInfo === false) {
-            throw new RuntimeException('Upload alleen geldige afbeeldingsbestanden.');
-        }
-
-        $extension = strtolower(pathinfo((string) $originalName, PATHINFO_EXTENSION));
-
-        if (!array_key_exists($extension, $allowedMimeTypes)) {
-            throw new RuntimeException('Alleen jpg, png, gif en webp zijn toegestaan.');
-        }
-
-        $mimeType = strtolower((string) ($imageInfo['mime'] ?? ''));
-
-        if (!in_array($mimeType, $allowedMimeTypes[$extension], true)) {
-            throw new RuntimeException('De bestandsextensie komt niet overeen met het afbeeldingsformaat.');
-        }
-
-        $baseName = strtolower(pathinfo((string) $originalName, PATHINFO_FILENAME));
-        $baseName = trim((string) preg_replace('/[^a-z0-9-]+/', '-', $baseName), '-');
-        $baseName = $baseName === '' ? 'afbeelding' : $baseName;
-        $fileName = $baseName . '.' . $extension;
-        $target = $targetDirectory . '/' . $fileName;
-        $counter = 2;
-
-        while (is_file($target)) {
-            $fileName = $baseName . '-' . $counter . '.' . $extension;
-            $target = $targetDirectory . '/' . $fileName;
-            $counter++;
-        }
-
-        if (!move_uploaded_file($temporaryName, $target)) {
-            throw new RuntimeException('De afbeelding kon niet worden opgeslagen.');
-        }
-
-        if (in_array($extension, ['jpg', 'jpeg'], true)) {
-            admin_compress_large_jpeg($target);
-        }
-
-        $uploaded[] = $relativeDirectory === '' ? $fileName : $relativeDirectory . '/' . $fileName;
+        throw $exception;
     }
 
     return $uploaded;

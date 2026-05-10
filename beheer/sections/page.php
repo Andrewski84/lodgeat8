@@ -1,4 +1,13 @@
-<?php $page = $config['pages'][$section]; ?>
+<?php
+/*
+ * Generic page admin section.
+ *
+ * Home, Leuven, location and cancellation-policy pages share this editor. The
+ * template renders multilingual text fields and then adds only the optional
+ * controls needed by the current page, such as a map URL or carousel photos.
+ */
+$page = $config['pages'][$section];
+?>
 <section class="admin-panel">
     <div class="panel-head">
         <div>

@@ -1,3 +1,11 @@
+<?php
+/*
+ * Links page template.
+ *
+ * The admin stores links in grouped columns. Each URL is checked again before
+ * rendering so malformed editable content cannot create unsafe public anchors.
+ */
+?>
 <div class="link-columns">
     <?php foreach ($page['columns'] as $heading => $links): ?>
         <section>

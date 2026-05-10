@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+/*
+ * Default site content.
+ *
+ * Production edits are read from storage/content/*.json and merged over this
+ * structure at runtime. This file therefore acts as both first-install content
+ * and a schema-like fallback for keys that older JSON content may not contain.
+ */
+
 return [
     'site' => [
         'name' => 'Lodging at 8',

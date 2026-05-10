@@ -2,8 +2,9 @@
 /**
  * Language Configuration
  *
- * Centralized language definitions and utilities for multi-language support.
- * Provides constants for language codes, labels, and display names.
+ * Centralized language definitions and utilities for multilingual support.
+ * This file decides which language is active for the current request and
+ * builds language-switch URLs while preserving the requested page key.
  *
  * Supported languages:
  * - nl: Dutch (Nederlands) - default

@@ -1,3 +1,12 @@
+<?php
+/*
+ * Public header partial.
+ *
+ * This partial combines the mobile menu toggle, language picker, booking call
+ * to action and primary navigation. Labels come from localized content helpers
+ * so the same navigation structure can render in every supported language.
+ */
+?>
 <header class="site-header" data-site-header>
     <div class="header-actions">
         <button class="nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-label="Menu">

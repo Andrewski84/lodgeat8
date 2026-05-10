@@ -1,8 +1,15 @@
 <?php
 declare(strict_types=1);
 
-// Admin logic is split into small modules to keep responsibilities clear:
-// settings/session/auth/content helpers/media/content save routines.
+/*
+ * Admin module loader.
+ *
+ * The admin area is split by responsibility: settings and session/auth are
+ * security-sensitive, content helpers normalize editable JSON, media handles
+ * uploads/deletions, and content-save turns form posts into validated content
+ * changes. Loading those modules here keeps beheer/index.php and the admin
+ * controller focused on request flow instead of include bookkeeping.
+ */
 foreach ([
     'settings.php',
     'session.php',

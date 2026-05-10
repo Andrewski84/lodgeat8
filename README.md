@@ -38,7 +38,8 @@ Open the site at `http://localhost:8000` and the admin area at `http://localhost
 - `assets/js/admin.js` contains admin interactions.
 - `assets/img/` contains all public and admin-managed images.
 - `storage/content/` contains editable site content split across logical JSON files.
-- `storage/admin.php` contains local runtime admin credentials after setup and is not committed.
+- `storage/admin.json` contains local runtime admin credentials after setup and is not committed. A legacy `storage/admin.php` is read only for migration and should not be deployed.
+- `storage/mail-settings.json` contains optional SMTP settings and is edited manually on the server when needed.
 - `storage/contact-messages.json` stores contact form submissions.
 - `tools/go-live-check.php` validates the site before deployment.
 
@@ -65,12 +66,14 @@ Before deploying, run:
 php tools/go-live-check.php
 ```
 
-Upload the project contents directly into the public web root where `index.php` should load. Keep `.htaccess` files in place because they protect internal folders such as `storage/`, `includes/`, `views/`, `tools/`, `beheer/partials/` and `beheer/sections/`.
+Upload the project contents directly into the public web root where `index.php` should load. Keep `.htaccess` files in place because they protect internal folders such as `storage/`, `includes/`, `views/`, `tools/`, `beheer/partials/` and `beheer/sections/`, and block executable uploads in `assets/img/`.
 
-Do not upload local logs, temporary files, one-off test artifacts or a development `storage/admin.php`. Let production create its own admin login on first setup, or replace it only with the intended production credentials.
+Do not upload local logs, temporary files, one-off test artifacts, lock files or development runtime credentials such as `storage/admin.json` or legacy `storage/admin.php`. Let production create its own admin login on first setup, or replace it only with the intended production credentials.
 
 ## Contact Form
 
 Contact messages are written to `storage/contact-messages.json`. The site also attempts to send an email to the configured site address. If hosting blocks PHP `mail()`, the JSON copy remains available.
+
+Optional SMTP delivery via PHPMailer is configured directly in `storage/mail-settings.json`; the admin area does not edit these technical mail settings.
 
 The form includes CSRF protection, a honeypot, minimum submit-time validation and basic rate limiting (stored in `storage/contact-rate-limit.json`).

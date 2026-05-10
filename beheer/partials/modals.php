@@ -1,3 +1,12 @@
+<?php
+/*
+ * Shared admin modals.
+ *
+ * These dialogs are included once by the authenticated admin shell. JavaScript
+ * opens them for unsaved-change navigation, optional browser-side photo
+ * resizing, background focus selection and rich-text link insertion.
+ */
+?>
 <div class="unsaved-modal" data-unsaved-modal hidden>
     <div class="unsaved-modal-backdrop" data-unsaved-stay></div>
     <section class="unsaved-modal-panel" role="dialog" aria-modal="true" aria-labelledby="unsaved-modal-title">
